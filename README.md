@@ -28,7 +28,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 | 01 | Estrutura do projeto, configuração e relógio da loja | ✅ |
 | 02 | ETL: limpeza, carga em SQLite e relatório de qualidade | ✅ |
 | 03 | Regras de negócio determinísticas | ✅ |
-| 04 | Ferramentas de catálogo e pedidos | ⏳ |
+| 04 | Ferramentas de catálogo e pedidos | ✅ |
 | 05 | RAG sobre o manual de políticas | ⏳ |
 | 06 | Provedores de LLM (Gemini API e Ollama) | ⏳ |
 | 07 | Agente: persona, loop de function calling e guardrails | ⏳ |
@@ -57,6 +57,10 @@ cp .env.example .env
 
 # Gera data/processed/store.db e docs/relatorio_qualidade_dados.md
 python -m emporio.etl
+
+# Chama as ferramentas do agente diretamente, sem LLM
+python -m emporio.tools
+python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1000}'
 
 # Testes
 pytest
@@ -130,6 +134,46 @@ adotada estão em [`docs/suposicoes.md`](docs/suposicoes.md).
 
 **Limitação conhecida:** as regras foram transcritas da versão 2.1 do manual. Se o manual
 mudar, `rules/` precisa ser atualizado junto.
+
+## Ferramentas do agente
+
+O agente responde sobre dados da loja exclusivamente por meio de ferramentas
+(`src/emporio/tools/`). Cada uma é uma função Python descrita por um JSON Schema neutro,
+que a etapa 06 converte para o formato de cada provedor de LLM.
+
+| Ferramenta | Quando o modelo usa |
+|---|---|
+| `buscar_produtos` | "Quais violões até R$ 1.000?", "tem ukulele elétrico?" |
+| `detalhar_produto` | "Quanto custa o Takamine GD20?" (preço, promoção, PIX, parcelas, specs) |
+| `listar_promocoes` | "Tem alguma promoção?", "a Black Friday já começou?" |
+| `consultar_pedido` | "Qual o status do meu pedido 8?" |
+| `avaliar_troca_devolucao` | "Me arrependi, posso devolver?" |
+| `status_da_loja` | "Vocês estão abertos?", endereço, telefone |
+| `consultar_frete` | "Quanto é o frete para Dourados?" |
+
+**Decisões de projeto.**
+
+- **Valores prontos.** As ferramentas devolvem preços e datas já formatados ("R$ 2.089,05",
+  "01/11/2025"). O modelo só repete; nunca soma, desconta ou conta dias.
+- **Orientações junto com os fatos.** Quando um dado exige cuidado (pedido atrasado, total
+  divergente, produto esgotado), a ferramenta devolve `orientacoes_ao_agente` dizendo como
+  comunicar. Os achados do ETL chegam à conversa sem que o modelo precise conhecê-los.
+- **Busca determinística, não semântica.** Com 65 produtos, uma busca por tokens tolerante a
+  acentos, plurais e erros de digitação ("takamini gd 20" encontra o GD20) é mais precisa e
+  explicável do que embeddings. Filtros de preço são SQL, não similaridade. Quando um nome é
+  ambíguo ("Martin"), a ferramenta devolve os candidatos para o agente perguntar.
+- **Escopo.** Pedidos de acessórios (palhetas, cabos, pedais...) e categorias sem produtos
+  (sopros, cordas orquestrais) são sinalizados pela ferramenta, para o agente não inventar
+  itens.
+- **Erros viram dados.** Uma falha retorna `{"erro": "..."}` em vez de exceção, para o
+  agente repassar ao modelo e ele reagir (pedir outro dado, tentar outra ferramenta).
+
+**Segurança dos pedidos (LGPD).** Consultar um pedido exige o número e o e-mail ou telefone
+do dono daquele pedido, comparados por HMAC em tempo constante. A mensagem de falha é
+idêntica para pedido inexistente e contato errado, para não revelar quais números existem.
+Depois de 3 falhas, a conversa só consulta pedidos via atendente. Se o e-mail do cliente é
+compartilhado com outro cadastro, só o telefone é aceito. A resposta traz apenas o primeiro
+nome do cliente, e as ferramentas abrem o banco em modo somente leitura.
 
 ## Estrutura
 

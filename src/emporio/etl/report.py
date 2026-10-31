@@ -12,9 +12,7 @@ from datetime import date
 
 from emporio.etl.checks import Issue
 from emporio.etl.transform import CleanData
-
-OPEN_ORDER_STATUSES = ("pending", "confirmed", "shipped")
-STALE_AFTER_DAYS = 30
+from emporio.rules.orders import STALE_AFTER_DAYS, delay_message
 
 
 @dataclass(frozen=True)
@@ -28,22 +26,19 @@ class Alert:
 
 def operational_alerts(orders: list[dict], reference: date) -> list[Alert]:
     """Pedidos em aberto com previsão vencida ou parados há mais de 30 dias."""
-    alerts: list[Alert] = []
+    alerts = []
     for order in sorted(orders, key=lambda o: o["order_id"]):
-        if order["status"] not in OPEN_ORDER_STATUSES:
-            continue
-        estimated = order["estimated_delivery"]
-        age = (reference - date.fromisoformat(order["order_date"])).days
-        if estimated and date.fromisoformat(estimated) < reference:
-            late = (reference - date.fromisoformat(estimated)).days
-            situation = f"previsão de entrega vencida há {late} dias"
-        elif age > STALE_AFTER_DAYS:
-            situation = f"em aberto há {age} dias"
-        else:
-            continue
-        alerts.append(
-            Alert(order["order_id"], order["status"], order["order_date"], estimated, situation)
-        )
+        situation = delay_message(order, reference)
+        if situation:
+            alerts.append(
+                Alert(
+                    order["order_id"],
+                    order["status"],
+                    order["order_date"],
+                    order["estimated_delivery"],
+                    situation,
+                )
+            )
     return alerts
 
 
