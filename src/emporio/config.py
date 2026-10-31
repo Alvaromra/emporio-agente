@@ -36,6 +36,8 @@ def _optional_bool(value: str | None) -> bool | None:
 class Settings:
     raw_dir: Path
     db_path: Path
+    app_db_path: Path
+    retention_days: int
     timezone: str
     now_override: str | None
     pii_pepper: str
@@ -56,6 +58,8 @@ def get_settings() -> Settings:
     return Settings(
         raw_dir=_path("EMPORIO_RAW_DIR", "data/raw"),
         db_path=_path("EMPORIO_DB_PATH", "data/processed/store.db"),
+        app_db_path=_path("EMPORIO_APP_DB_PATH", "data/runtime/app.db"),
+        retention_days=int(os.getenv("EMPORIO_RETENTION_DAYS") or 90),
         timezone=os.getenv("EMPORIO_TIMEZONE", "America/Campo_Grande"),
         now_override=os.getenv("EMPORIO_NOW") or None,
         pii_pepper=os.getenv("EMPORIO_PII_PEPPER") or DEV_PII_PEPPER,

@@ -22,6 +22,7 @@ from emporio.agent.pii import PiiVault
 from emporio.agent.prompt import build_system_prompt
 from emporio.config import get_settings
 from emporio.llm import LLMProvider, Message
+from emporio.memory.store import ConversationStore
 from emporio.tools import TOOLS, Tool, ToolContext, VerificationGuard, execute
 from emporio.tools.base import InMemoryHandoffs
 
@@ -35,6 +36,8 @@ class Session:
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     history: list[Message] = field(default_factory=list)
     vault: PiiVault = field(default_factory=PiiVault)
+    channel: str = "cli"
+    saved: int = 0  # quantas mensagens do histórico já estão no banco
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,7 @@ class Agent:
         db_path=None,
         pepper: str | None = None,
         handoffs=None,
+        store: ConversationStore | None = None,
     ):
         settings = get_settings()
         self.provider = provider
@@ -78,7 +82,32 @@ class Agent:
         self.db_path = db_path or settings.db_path
         self.pepper = pepper or settings.pii_pepper
         self.guard = VerificationGuard()  # compartilhado entre conversas, indexado por sessão
-        self.handoffs = handoffs or InMemoryHandoffs()
+        self.store = store
+        # Com banco, os protocolos ficam nele; sem banco (testes, modo efêmero), em memória.
+        self.handoffs = handoffs or store or InMemoryHandoffs()
+
+    def new_session(self, channel: str = "cli") -> Session:
+        session = Session(channel=channel)
+        if self.store:
+            self.store.ensure_session(session.id, channel, clock.now())
+        return session
+
+    def resume(self, session_id: str) -> Session | None:
+        """Retoma uma conversa salva. Os marcadores de dados pessoais continuam
+        marcadores: o cofre não é persistido, então o cliente informa o contato de
+        novo se precisar consultar um pedido."""
+        if not self.store or not self.store.exists(session_id):
+            return None
+        history = self.store.load(session_id)
+        return Session(id=session_id, history=history, saved=len(history))
+
+    def _persist(self, session: Session) -> None:
+        if not self.store:
+            return
+        now = clock.now()
+        self.store.ensure_session(session.id, session.channel, now)
+        self.store.append(session.id, session.history[session.saved :], now)
+        session.saved = len(session.history)
 
     def _context(self, session: Session) -> ToolContext:
         return ToolContext(
@@ -145,5 +174,6 @@ class Agent:
             result.text = guardrails.FALLBACK_LOOP
             session.history.append(Message("assistant", result.text))
 
+        self._persist(session)
         result.elapsed_s = round(time.perf_counter() - started, 2)
         return result

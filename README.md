@@ -32,7 +32,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 | 05 | RAG sobre o manual de políticas | ✅ |
 | 06 | Provedores de LLM (Gemini API e Ollama) | ✅ |
 | 07 | Agente: persona, loop de function calling e guardrails | ✅ |
-| 08 | Persistência do histórico de conversa | ⏳ |
+| 08 | Persistência do histórico de conversa | ✅ |
 | 09 | Interface web, API e CLI | ⏳ |
 | 10 | Documentação final, conversas de exemplo e avaliações | ⏳ |
 
@@ -68,6 +68,11 @@ python -m emporio.llm "quanto custa o Takamine GD20?"
 
 # Conversa com o agente no terminal (--trace mostra as ferramentas chamadas)
 python -m emporio.agent --trace
+
+# Conversas salvas: listar, mostrar, exportar, apagar, aplicar a retenção
+python -m emporio.memory
+python -m emporio.memory --mostrar ID
+python -m emporio.memory --encaminhamentos
 
 # Consulta o manual de políticas e mede a qualidade da recuperação
 python -m emporio.rag "me arrependi, posso devolver?"
@@ -324,6 +329,41 @@ de forma irreversível, e o agente orienta o cliente a não enviá-los.
 **Encaminhamento.** Reclamações, atrasos e pedidos para falar com uma pessoa geram um
 protocolo (`encaminhar_para_atendente`) com o prazo de retorno do manual (24 horas úteis).
 Nesta etapa os protocolos ficam em memória; a etapa 08 os persiste.
+
+## Persistência do histórico
+
+O enunciado pede persistência "se fizer sentido para a experiência do usuário". Fez, por
+quatro motivos:
+
+1. **Continuidade.** O cliente informa o pedido numa mensagem e pergunta sobre troca na
+   seguinte; a conversa também sobrevive a um reinício do servidor (`--sessao ID` na CLI).
+2. **Encaminhamento.** Quando o agente gera um protocolo, a equipe precisa ver a conversa
+   que levou até ele. Os protocolos ficam no mesmo banco, ligados à conversa.
+3. **Auditoria.** Cada chamada de ferramenta fica registrada com os argumentos, o que
+   permite entender por que o agente respondeu o que respondeu.
+4. **Exemplos e avaliação.** As conversas de exemplo deste repositório são exportadas do
+   banco (`python -m emporio.memory --exportar`), e não reescritas à mão.
+
+**Onde.** SQLite em `data/runtime/app.db`, separado do banco da loja, porque o ETL recria o
+`store.db` do zero. A pasta é ignorada pelo git. Uma conexão por operação e o modo WAL
+deixam o banco seguro para a interface web, que atende várias conversas ao mesmo tempo.
+
+**O que é guardado, e o que não é.**
+
+| Guardado | Não guardado |
+|---|---|
+| Mensagens como o modelo as viu: e-mails e telefones já trocados por marcadores | O cofre que liga marcador e valor real (fica só em memória) |
+| Chamadas de ferramenta com os argumentos marcados | CPF e cartão (removidos antes de tudo) |
+| Respostas reprovadas pelo guardrail, marcadas como internas (para auditoria) | Metadados internos do provedor de LLM |
+| Protocolos de encaminhamento e seus resumos | |
+
+A consequência é deliberada: ao retomar uma conversa depois de um reinício, os marcadores
+não podem mais ser convertidos de volta, e o cliente informa o contato de novo se quiser
+consultar um pedido. É o preço de nunca gravar o dado pessoal.
+
+**Retenção e exclusão.** Conversas sem atividade há mais de 90 dias (`EMPORIO_RETENTION_DAYS`)
+são apagadas por `python -m emporio.memory --purgar`, pensado para rodar num agendador. A
+exclusão a pedido do cliente, prevista no manual (seção 9), é `--apagar ID`.
 
 ## Estrutura
 

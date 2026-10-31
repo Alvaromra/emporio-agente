@@ -14,6 +14,9 @@ venv/
 data/processed/*
 !data/processed/.gitkeep
 
+# Conversas dos clientes: nunca vão para o repositório
+data/runtime/
+
 # Sistema
 .DS_Store
 Thumbs.db

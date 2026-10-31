@@ -3,6 +3,8 @@
     python -m emporio.agent                 # modo interativo
     python -m emporio.agent --trace         # mostra as ferramentas chamadas
     python -m emporio.agent "oi, vocês estão abertos?"   # uma pergunta só
+    python -m emporio.agent --sessao ID     # retoma uma conversa salva
+    python -m emporio.agent --efemero       # não salva a conversa
 
 Comandos no modo interativo: /trace (liga/desliga), /nova (nova conversa), /sair.
 """
@@ -17,9 +19,11 @@ import json
 with contextlib.suppress(ImportError):
     import readline  # noqa: F401
 
-from emporio.agent import Agent, AgentReply, Session
+from emporio.agent import Agent, AgentReply
 from emporio.agent.prompt import AGENT_NAME
+from emporio.config import get_settings
 from emporio.llm import LLMError, get_provider
+from emporio.memory import ConversationStore
 
 
 def show(reply: AgentReply, trace: bool) -> None:
@@ -38,20 +42,32 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m emporio.agent")
     parser.add_argument("mensagem", nargs="?")
     parser.add_argument("--trace", action="store_true")
+    parser.add_argument("--sessao", metavar="ID", help="retoma uma conversa salva")
+    parser.add_argument("--efemero", action="store_true", help="não salva a conversa")
     args = parser.parse_args(argv)
 
+    store = None if args.efemero else ConversationStore(get_settings().app_db_path)
     try:
-        agent = Agent(get_provider())
+        agent = Agent(get_provider(), store=store)
     except LLMError as error:
         print(f"Erro: {error}")
         return 1
-    session, trace = Session(), args.trace
+    trace = args.trace
+    if args.sessao:
+        session = agent.resume(args.sessao)
+        if session is None:
+            print(f"Conversa {args.sessao} não encontrada.")
+            return 1
+    else:
+        session = agent.new_session("cli")
 
     if args.mensagem:
         show(agent.reply(session, args.mensagem), trace)
         return 0
 
     print(f"Empório da Música | {agent.provider.name}: {agent.provider.model}")
+    if store:
+        print(f"Conversa: {session.id} (salva em {store.path.name})")
     print("Comandos: /trace, /nova, /sair\n")
     while True:
         try:
@@ -68,8 +84,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"(trace {'ligado' if trace else 'desligado'})\n")
             continue
         if text == "/nova":
-            session = Session()
-            print("(nova conversa)\n")
+            session = agent.new_session("cli")
+            print(f"(nova conversa: {session.id})\n")
             continue
         try:
             show(agent.reply(session, text), trace)
