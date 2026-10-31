@@ -15,7 +15,7 @@ def test_violoes_ate_mil_reais(make_ctx):
     assert result["filtros_aplicados"]["categoria"] == "Violões"
     assert 96 not in ids(result) and 113 not in ids(result)  # esgotado / fora de linha
     assert result["indisponiveis_ocultos"] == 2
-    assert "observacao" in result  # 12 resultados, limite padrão de 8
+    assert "orientacao" in result  # 12 resultados, limite padrão de 5
 
 
 def test_preco_vindo_como_texto_e_aceito(make_ctx):
@@ -84,7 +84,7 @@ def test_descricao_contraditoria_nao_chega_ao_agente(make_ctx):
     result = run(make_ctx, "detalhar_produto", produto="Music Man Bass 1X")
     assert result["descricao"] is None
     assert "Fender" not in str(result)
-    assert "observacao_descricao" in result
+    assert "orientacao_descricao" in result
 
 
 def test_especificacoes_traduzidas(make_ctx):

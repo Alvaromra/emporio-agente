@@ -76,7 +76,7 @@ def test_pedido_com_produto_nao_lancado(make_ctx):
 def test_pedido_cancelado_mostra_motivo(make_ctx):
     result = consultar(make_ctx(), 17, "matheus.correia@hayoo.com.br")
     assert result["status"] == "cancelado"
-    assert "cancelado pelo cliente" in result["observacao"]
+    assert "cancelado pelo cliente" in result["nota_do_pedido"]
 
 
 def test_arrependimento_fora_do_prazo(make_ctx):

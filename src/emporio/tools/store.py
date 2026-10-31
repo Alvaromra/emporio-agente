@@ -22,7 +22,7 @@ def status_da_loja(ctx: ToolContext) -> dict:
         "agora_em_campo_grande": status.now.strftime("%d/%m/%Y %H:%M"),
         "situacao": status.summary(),
         "horario_de_funcionamento": weekly_hours_text(),
-        "observacao": SPECIAL_DATES_NOTE,
+        "datas_especiais": SPECIAL_DATES_NOTE,
         "endereco": STORE_INFO["endereco"],
         "telefone_whatsapp": STORE_INFO["telefone_whatsapp"],
         "email": STORE_INFO["email"],

@@ -20,7 +20,7 @@ from emporio.tools.search import (
     tokens,
 )
 
-DEFAULT_LIMIT = 8
+DEFAULT_LIMIT = 5
 MAX_LIMIT = 15
 LOW_STOCK = 2
 ALTERNATIVES = 3
@@ -114,7 +114,7 @@ def _category(conn: sqlite3.Connection, slug: str) -> sqlite3.Row:
             "type": "boolean",
             "description": "Se true, inclui esgotados e fora de linha. Padrão: false.",
         },
-        "limite": {"type": "integer", "description": "Máximo de resultados (padrão 8)."},
+        "limite": {"type": "integer", "description": "Máximo de resultados (padrão 5)."},
     },
 )
 def buscar_produtos(
@@ -171,9 +171,9 @@ def buscar_produtos(
         "produtos": [summarize(r) for r in selected[:limite]],
     }
     if len(selected) > limite:
-        result["observacao"] = (
-            f"Mostrando {limite} de {len(selected)}. Pergunte ao cliente se quer refinar "
-            "(faixa de preço, marca, tipo)."
+        result["orientacao"] = (
+            f"Mostrando {limite} de {len(selected)}. Diga ao cliente quantas opções existem e "
+            "pergunte se quer refinar (faixa de preço, marca, tipo de corda)."
         )
     if hidden and not incluir_indisponiveis:
         result["indisponiveis_ocultos"] = hidden
@@ -264,7 +264,7 @@ def detalhar_produto(ctx: ToolContext, produto: str) -> dict:
         "descricao": row["description"],
     }
     if row["description"] is None:
-        result["observacao_descricao"] = (
+        result["orientacao_descricao"] = (
             "Descrição em revisão pela equipe. Use apenas nome e especificações."
         )
     if row["is_sellable"]:

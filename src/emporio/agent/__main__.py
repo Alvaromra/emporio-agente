@@ -10,7 +10,12 @@ Comandos no modo interativo: /trace (liga/desliga), /nova (nova conversa), /sair
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+
+# Habilita setas e histórico no input(). Não existe no Windows, onde é dispensável.
+with contextlib.suppress(ImportError):
+    import readline  # noqa: F401
 
 from emporio.agent import Agent, AgentReply, Session
 from emporio.agent.prompt import AGENT_NAME

@@ -155,7 +155,7 @@ def consultar_pedido(
     if order["estimated_delivery"] and order["status"] != "cancelled":
         result["previsao_de_entrega"] = _fmt_date(order["estimated_delivery"])
     if order["notes"]:
-        result["observacao"] = order["notes"]
+        result["nota_do_pedido"] = order["notes"]
 
     guidance = [ISSUE_GUIDANCE[c] for c in codes if c in ISSUE_GUIDANCE]
     delay = delay_message(dict(order), today)
@@ -207,7 +207,7 @@ def avaliar_troca_devolucao(
         "secoes_do_manual": assessment.policy_sections,
     }
     if assessment.reason is Reason.ARREPENDIMENTO:
-        result["observacao"] = (
+        result["orientacao"] = (
             "Prazo contado a partir da previsão de entrega registrada, pois o sistema não "
             "guarda a data real de recebimento. Se o cliente recebeu depois, a equipe confirma."
         )

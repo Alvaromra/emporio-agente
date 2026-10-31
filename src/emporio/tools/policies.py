@@ -60,7 +60,7 @@ def buscar_politicas(ctx: ToolContext, pergunta: str) -> dict:
     return {
         "trechos": [{"secao": c.section, "titulo": c.heading, "texto": c.text} for c, _ in hits],
         "orientacoes": [
-            "Responda somente com base nestes trechos e mencione a seção quando ajudar.",
+            "Responda somente com base nestes trechos, sem citar números de seção ao cliente.",
             "Se nenhum trecho responde à pergunta, diga que não tem essa informação e "
             "ofereça o atendimento da equipe.",
             *hints,
