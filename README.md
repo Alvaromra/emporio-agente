@@ -30,7 +30,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 | 03 | Regras de negócio determinísticas | ✅ |
 | 04 | Ferramentas de catálogo e pedidos | ✅ |
 | 05 | RAG sobre o manual de políticas | ✅ |
-| 06 | Provedores de LLM (Gemini API e Ollama) | ⏳ |
+| 06 | Provedores de LLM (Gemini API e Ollama) | ✅ |
 | 07 | Agente: persona, loop de function calling e guardrails | ⏳ |
 | 08 | Persistência do histórico de conversa | ⏳ |
 | 09 | Interface web, API e CLI | ⏳ |
@@ -61,6 +61,10 @@ python -m emporio.etl
 # Chama as ferramentas do agente diretamente, sem LLM
 python -m emporio.tools
 python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1000}'
+
+# Testa o modelo (exige GEMINI_API_KEY no .env, ou Ollama configurado)
+python -m emporio.llm --ping
+python -m emporio.llm "quanto custa o Takamine GD20?"
 
 # Consulta o manual de políticas e mede a qualidade da recuperação
 python -m emporio.rag "me arrependi, posso devolver?"
@@ -223,6 +227,52 @@ regra ao caso concreto. Quando um trecho recuperado trata de algo calculável (p
 prazos de devolução, frete, loja aberta agora), a ferramenta acrescenta uma orientação para
 o modelo usar a ferramenta de cálculo correspondente. Trechos internos (tom de voz, fluxo
 de atendimento) vêm marcados para serem seguidos, não recitados ao cliente.
+
+## Modelo e provedor
+
+O agente usa a família **Gemma 4** (Google), por dois caminhos atrás da mesma interface
+(`src/emporio/llm/`), escolhidos por `EMPORIO_LLM_PROVIDER`:
+
+| Provedor | Modelo padrão | Quando usar |
+|---|---|---|
+| `gemini` (padrão) | `gemma-4-26b-a4b-it` via Gemini API | Avaliação e demonstração: basta uma chave gratuita, sem GPU |
+| `ollama` | `gemma4:e4b` local | Sem internet, sem cotas, ou sem enviar dados de clientes a terceiros |
+
+**Por que Gemma 4.** Tem function calling nativo, treinado no modelo e não emulado por
+prompt, que é a base de um agente com ferramentas. Os pesos são abertos (Apache 2.0), então o
+mesmo modelo que roda na API pode rodar na infraestrutura da loja. O `gemma2:9b`, testado no
+início, foi descartado por não ter function calling nativo.
+
+**Por que o 26B A4B como padrão.** É um modelo MoE: tem qualidade de modelo grande, mas ativa
+cerca de 4B parâmetros por token, o que o torna rápido. Relatos públicos indicam que a
+confiabilidade de chamadas de ferramenta das variantes menores (E2B/E4B) é inferior; por
+isso a variante local fica como alternativa, e a qualidade de cada uma será comparada nas
+avaliações da etapa 10.
+
+**Sem framework de agentes.** A interface é fina: tipos neutros de mensagem (`Message`,
+`ToolCall`) e um método `complete()` por provedor. Cada provedor converte o histórico e as
+ferramentas para o seu formato. Isso evita camadas de adaptação que, no caso do Gemma 4, são
+uma fonte conhecida de bugs no formato das chamadas de ferramenta. O provedor Ollama ainda
+reconhece o formato nativo do Gemma 4 (`<|tool_call>call:...`) quando ele vaza no texto.
+
+**Detalhes que importam.**
+
+- O SDK do Google não executa ferramentas sozinho (`automatic_function_calling` desligado): o
+  agente controla o loop, aplica limites e registra cada chamada.
+- O raciocínio interno do modelo (partes `thought`) é descartado e nunca chega ao cliente.
+- A mensagem original do modelo é reenviada como veio, preservando metadados que a API usa
+  entre turnos.
+- Erros 429 e 5xx são repetidos automaticamente com espera exponencial; falhas viram
+  mensagens claras (chave inválida, cota esgotada, Ollama desligado, modelo não baixado).
+- Temperatura 0,3: num atendimento, consistência e fidelidade às ferramentas valem mais do
+  que variedade.
+
+**LGPD e provedor.** Pelos termos da Gemini API, o conteúdo enviado no tier gratuito pode ser
+usado pelo Google para melhorar produtos e lido por revisores humanos, e o Google orienta não
+enviar dados pessoais nesse tier. Para um protótipo com dados fictícios isso é aceitável. Em
+produção, com clientes reais, o caminho seria o tier pago (em que os dados não são usados
+para treino) ou o Ollama local. Como mitigação adicional, a etapa 07 substitui e-mails e
+telefones por marcadores antes de enviar a mensagem ao modelo.
 
 ## Estrutura
 

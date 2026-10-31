@@ -15,6 +15,9 @@ dependencies = [
     "tzdata>=2024.1",
     # Leitura do manual de políticas (puro Python, sem dependências do sistema).
     "pypdf>=6.0,<7",
+    # Provedores de LLM: Gemini API (padrão) e Ollama (local).
+    "google-genai>=2.0,<3",
+    "ollama>=0.6,<1",
 ]
 
 [project.optional-dependencies]

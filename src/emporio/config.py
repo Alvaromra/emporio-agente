@@ -26,6 +26,12 @@ def _path(env_var: str, default: str) -> Path:
     return raw if raw.is_absolute() else PROJECT_ROOT / raw
 
 
+def _optional_bool(value: str | None) -> bool | None:
+    if value is None or not value.strip():
+        return None
+    return value.strip().lower() in {"1", "true", "sim", "yes"}
+
+
 @dataclass(frozen=True)
 class Settings:
     raw_dir: Path
@@ -33,6 +39,12 @@ class Settings:
     timezone: str
     now_override: str | None
     pii_pepper: str
+    llm_provider: str
+    llm_model: str | None
+    llm_temperature: float
+    gemini_api_key: str | None
+    ollama_host: str
+    ollama_think: bool | None
 
     @property
     def pii_pepper_is_default(self) -> bool:
@@ -47,4 +59,10 @@ def get_settings() -> Settings:
         timezone=os.getenv("EMPORIO_TIMEZONE", "America/Campo_Grande"),
         now_override=os.getenv("EMPORIO_NOW") or None,
         pii_pepper=os.getenv("EMPORIO_PII_PEPPER") or DEV_PII_PEPPER,
+        llm_provider=(os.getenv("EMPORIO_LLM_PROVIDER") or "gemini").strip().lower(),
+        llm_model=os.getenv("EMPORIO_LLM_MODEL") or None,
+        llm_temperature=float(os.getenv("EMPORIO_LLM_TEMPERATURE") or 0.3),
+        gemini_api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or None,
+        ollama_host=os.getenv("OLLAMA_HOST") or "http://localhost:11434",
+        ollama_think=_optional_bool(os.getenv("EMPORIO_OLLAMA_THINK")),
     )
