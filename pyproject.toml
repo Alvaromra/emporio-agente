@@ -21,6 +21,9 @@ dev = [
     "ruff>=0.6",
 ]
 
+[project.scripts]
+emporio-etl = "emporio.etl.__main__:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
