@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Segredos e configuração local
+.env
+
+# Artefatos gerados (reproduzíveis a partir de data/raw)
+data/processed/*
+!data/processed/.gitkeep
+
+# Sistema
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

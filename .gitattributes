@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+# Dados originais da loja: preservar os bytes exatamente (inclusive CRLF).
+data/raw/** -text
