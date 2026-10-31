@@ -33,6 +33,7 @@ class ContractError(ValueError):
 class RawData:
     tables: dict[str, list[Row]]
     sources: dict[str, str]  # nome do arquivo -> SHA-256
+    manual_path: Path
 
 
 def find_table_file(raw_dir: Path, table: str) -> Path:
@@ -58,6 +59,14 @@ def read_table(path: Path, expected: tuple[str, ...]) -> list[Row]:
         return [{col: (row.get(col) or "").strip() for col in expected} for row in reader]
 
 
+def find_manual(raw_dir: Path) -> Path:
+    candidates = sorted(raw_dir.glob("*.pdf"))
+    if len(candidates) != 1:
+        found = ", ".join(p.name for p in candidates) or "nenhum"
+        raise ContractError(f"Esperava 1 PDF de políticas em {raw_dir}, achei: {found}")
+    return candidates[0]
+
+
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -69,4 +78,6 @@ def extract(raw_dir: Path) -> RawData:
         path = find_table_file(raw_dir, table)
         tables[table] = read_table(path, expected)
         sources[path.name] = sha256(path)
-    return RawData(tables=tables, sources=sources)
+    manual = find_manual(raw_dir)
+    sources[manual.name] = sha256(manual)
+    return RawData(tables=tables, sources=sources, manual_path=manual)

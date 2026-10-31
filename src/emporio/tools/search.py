@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from difflib import get_close_matches
 
-from emporio.text import fold
+from emporio.text import fold, stem
 
 STOPWORDS = {
     "a", "o", "as", "os", "um", "uma", "de", "do", "da", "dos", "das", "e", "em", "no",
@@ -40,15 +40,6 @@ ACCESSORY_TERMS = (
     "cubo", "correia", "baqueta", "estante", "suporte", "encordoamento", "jogo de cordas",
     "cordas para", "corda para", "cordas avulsas",
 )  # fmt: skip
-
-
-def stem(token: str) -> str:
-    """Radical simples para plurais em português: violões -> violao, cordas -> corda."""
-    if token.endswith(("oes", "aes")) and len(token) > 4:
-        return token[:-3] + "ao"
-    if token.endswith("s") and len(token) > 3 and not token[-2].isdigit():
-        return token[:-1]
-    return token
 
 
 def tokens(text: str) -> list[str]:

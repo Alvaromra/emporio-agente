@@ -80,6 +80,7 @@ class CleanData:
     customers: list[dict] = field(default_factory=list)
     orders: list[dict] = field(default_factory=list)
     order_items: list[dict] = field(default_factory=list)
+    policy_chunks: list[dict] = field(default_factory=list)
     issues: list[Issue] = field(default_factory=list)
 
 

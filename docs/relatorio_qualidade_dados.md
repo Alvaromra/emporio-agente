@@ -13,11 +13,12 @@
 | `customers` | 50 |
 | `orders` | 20 |
 | `order_items` | 22 |
+| `policy_chunks` | 25 |
 
 - Produtos vendáveis (ativos e com estoque): **61** de 65.
 - Promoções ativas: **4** de 25.
 - Produtos com descrição não confiável: **7**.
-- Achados de qualidade: **41** em 13 tipos.
+- Achados de qualidade: **43** em 14 tipos.
 
 ## Achados e tratamento
 
@@ -33,6 +34,7 @@
 | média | Produto fora de linha ou em pré-lançamento com estoque positivo | 2 | products 130, 136 | O status prevalece sobre o estoque: o produto não é ofertado. |
 | baixa | Cliente de Campo Grande com código de rastreio de transportadora | 7 | orders 1, 2, 3, 4, 5, 7, 8 | O manual (5.1) prevê motoboy próprio na região. O agente informa o código existente sem afirmar qual transportadora fez a entrega. |
 | baixa | Pedido pago via PIX com total igual ao preço de tabela, sem o desconto de 5% | 5 | orders 1, 5, 10, 13, 17 | O agente informa o total registrado e não afirma se houve desconto: ele pode ter sido aplicado no pagamento sem constar no total. |
+| baixa | Erro no manual de políticas corrigido antes da indexação | 2 | policy_chunks 1.2, 7 | Correção explícita e versionada (rag/manual.py, ERRATA); o agente nunca vê a versão com erro. |
 | baixa | Produto ativo sem estoque | 1 | products 96 | Informar indisponibilidade e sugerir alternativas semelhantes (manual 7.3). |
 | baixa | Nome corrigido pela tabela explícita de correções | 1 | products 84 | Correção versionada no código, aplicada só se o nome original ainda estiver errado. |
 | baixa | Preço abaixo de 20% da mediana da categoria | 2 | products 136, 142 | Preço mantido (o sistema é a fonte oficial); sinalizado para revisão da equipe. |
@@ -126,6 +128,13 @@ Código: `order.pix_discount_missing`
 - orders 13: total R$ 1.899,00 igual ao preço de tabela, sem os 5% do PIX
 - orders 17: total R$ 689,00 igual ao preço de tabela, sem os 5% do PIX
 
+### Erro no manual de políticas corrigido antes da indexação
+
+Código: `policy.errata_applied`
+
+- policy_chunks 1.2: 'contato@empóriodamusica.com.br' -> 'contato@emporiodamusica.com.br': e-mail com acento no domínio (M10)
+- policy_chunks 7: '(67) 3321-4500' -> '(67) 3341-4444': número de WhatsApp divergente dos dados cadastrais (M9)
+
 ### Produto ativo sem estoque
 
 Código: `product.active_out_of_stock`
@@ -169,5 +178,6 @@ Pedidos em aberto com previsão vencida ou sem atualização há mais de 30 dias
 | `customers.csv` | `1cd724dc86eac6258913cc890abf23d3893c57a99c9325ebfb91dfad3c7b0f37` |
 | `order_items.csv` | `7656eb681821d48e0c932f61d3188309b955c25446578235f2d8e69604b0f0bc` |
 | `orders.csv` | `deb9c2480605d8d22117d569f0045fd156c5e9a58ffeebb847ff61b3b9512fd5` |
+| `politicas_da_loja.pdf` | `b7527f96896929f4ba929de117651c6717e25b7a3b92b34bc54d5ba32f6156f7` |
 | `products.csv` | `78d911d96ee891abb163b6c858e895025aa530ab27d0290540f05d5098377c12` |
 | `promotions.csv` | `cbe08c7e91b00437c0c00a7ef1486deba73de52d23e3f97f51a7dbd557d759e0` |

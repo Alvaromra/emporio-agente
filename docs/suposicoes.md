@@ -36,8 +36,8 @@ As regras que geram números (prazos, parcelas, descontos, horários) estão em
 | M6 | O prazo de arrependimento conta do recebimento, mas os dados não têm a data real de entrega. | Usa-se a previsão de entrega (`estimated_delivery`) dos pedidos entregues. Pedidos do sistema são tratados como compras online, já que têm rastreio. | `rules/returns.py` |
 | M7 | A troca por preferência vale "em até 7 dias", sem dizer a partir de quando. | A partir do recebimento, como no arrependimento. | `rules/returns.py` |
 | M8 | Troca por defeito conta da compra (30 dias); garantia legal conta do recebimento (90 dias). | Os dois marcos são respeitados como estão no manual: `order_date` para a troca e recebimento para a garantia. | `rules/returns.py` |
-| M9 | Dois números de WhatsApp: (67) 3341-4444 (capa e dados da empresa) e (67) 3321-4500 (seção 7). | Informa-se (67) 3341-4444, que aparece duas vezes, inclusive nos dados cadastrais. O outro número não é divulgado até a loja confirmar. | `rules/store.py` |
-| M10 | O e-mail aparece como `contato@emporiodamusica.com.br` na capa e com acento (`empóriodamusica`) na tabela. | Usa-se a versão sem acento; domínio com acento é provável erro de digitação. | `rules/store.py` |
+| M9 | Dois números de WhatsApp: (67) 3341-4444 (capa e dados da empresa) e (67) 3321-4500 (seção 7). | Informa-se (67) 3341-4444, que aparece duas vezes, inclusive nos dados cadastrais. O outro número é substituído no texto do manual antes da indexação, até a loja confirmar. | `rules/store.py`, `rag/manual.py` |
+| M10 | O e-mail aparece como `contato@emporiodamusica.com.br` na capa e com acento (`empóriodamusica`) na tabela. | Usa-se a versão sem acento; domínio com acento é provável erro de digitação. A correção também é aplicada ao texto do manual. | `rules/store.py`, `rag/manual.py` |
 | M11 | Os dados de itens não indicam personalização, "venda final" nem boquilhas, que não são elegíveis para troca (4.4). | O agente não tem como verificar isso e informa essas exceções como condição, sem afirmar que o item se enquadra ou não. | `rules/returns.py` |
 
 Contradições encontradas nos próprios pedidos (parcelas abaixo do mínimo, PIX sem

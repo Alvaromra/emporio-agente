@@ -135,6 +135,12 @@ _CHECKS = [
         "Linhas consolidadas somando as quantidades.",
     ),
     Check(
+        "policy.errata_applied", Severity.BAIXA,
+        "Erro no manual de políticas corrigido antes da indexação",
+        "Correção explícita e versionada (rag/manual.py, ERRATA); o agente nunca vê a "
+        "versão com erro.",
+    ),
+    Check(
         "customer.shared_email", Severity.ALTA,
         "Mesmo e-mail em mais de um cadastro",
         "A verificação de identidade é sempre feita contra o dono de um pedido específico, "

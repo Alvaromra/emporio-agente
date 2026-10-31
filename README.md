@@ -29,7 +29,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 | 02 | ETL: limpeza, carga em SQLite e relatório de qualidade | ✅ |
 | 03 | Regras de negócio determinísticas | ✅ |
 | 04 | Ferramentas de catálogo e pedidos | ✅ |
-| 05 | RAG sobre o manual de políticas | ⏳ |
+| 05 | RAG sobre o manual de políticas | ✅ |
 | 06 | Provedores de LLM (Gemini API e Ollama) | ⏳ |
 | 07 | Agente: persona, loop de function calling e guardrails | ⏳ |
 | 08 | Persistência do histórico de conversa | ⏳ |
@@ -61,6 +61,10 @@ python -m emporio.etl
 # Chama as ferramentas do agente diretamente, sem LLM
 python -m emporio.tools
 python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1000}'
+
+# Consulta o manual de políticas e mede a qualidade da recuperação
+python -m emporio.rag "me arrependi, posso devolver?"
+python -m emporio.rag --eval
 
 # Testes
 pytest
@@ -174,6 +178,51 @@ idêntica para pedido inexistente e contato errado, para não revelar quais núm
 Depois de 3 falhas, a conversa só consulta pedidos via atendente. Se o e-mail do cliente é
 compartilhado com outro cadastro, só o telefone é aceito. A resposta traz apenas o primeiro
 nome do cliente, e as ferramentas abrem o banco em modo somente leitura.
+
+## RAG sobre o manual de políticas
+
+Perguntas abertas sobre regras da loja ("como funciona a garantia?", "vocês aceitam
+boleto?") são respondidas pela ferramenta `buscar_politicas`, que recupera trechos do
+manual e os entrega ao modelo com a orientação de responder somente com base neles.
+
+**Extração e divisão.** O PDF é lido com `pypdf` (puro Python) e dividido pelas seções
+numeradas do próprio manual (1, 1.1, 4.2...), resultando em 25 trechos. Dividir por seção,
+em vez de fatias de tamanho fixo, garante que uma regra nunca seja cortada ao meio e permite
+citar a seção exata. Cada trecho carrega o título da seção-mãe como contexto. Cabeçalhos e
+rodapés de página são removidos, e seções que atravessam páginas ficam inteiras. Itens
+numerados dentro de uma seção ("1. Saudação") não são confundidos com títulos, porque só
+conta como título o que avança a numeração.
+
+**Correções antes de indexar.** O manual tem dois erros (e-mail com acento no domínio e um
+número de WhatsApp divergente). Eles são corrigidos por uma errata explícita no código, e
+cada correção aparece no relatório de qualidade. O modelo nunca vê a versão com erro.
+
+**Recuperação lexical (BM25), não vetorial.** São 25 trechos de vocabulário estreito e
+previsível. BM25 é determinístico, roda sem rede e sem modelo de embeddings, e sua
+qualidade é medida. A distância entre a fala do cliente ("me arrependi", "chegou quebrado")
+e o vocabulário do manual ("arrependimento", "defeito", "avaria") é coberta por um dicionário
+de sinônimos pequeno e auditável, com peso menor que os termos originais.
+
+**Avaliação.** `evals/politicas.jsonl` tem 28 perguntas escritas como um cliente escreveria,
+cada uma com as seções que deveriam ser recuperadas. Resultado atual:
+
+| Métrica | Valor |
+|---|---|
+| hit@1 (seção correta em primeiro) | 26/28 (93%) |
+| hit@3 (seção correta entre as 3 primeiras) | 28/28 (100%) |
+| MRR | 0,96 |
+
+Como a ferramenta devolve os 3 primeiros trechos, o hit@3 é a métrica que importa para a
+resposta. Uma ressalva honesta: o conjunto de avaliação e o dicionário de sinônimos foram
+escritos juntos, então esses números medem regressão (se uma mudança piora a busca), não
+generalização. Com mais tempo, o próximo passo seria um conjunto maior, escrito por outra
+pessoa ou tirado de conversas reais, e comparar BM25 com busca vetorial e híbrida nele.
+
+**Roteamento entre RAG e ferramentas.** O manual explica a regra; as ferramentas aplicam a
+regra ao caso concreto. Quando um trecho recuperado trata de algo calculável (parcelas,
+prazos de devolução, frete, loja aberta agora), a ferramenta acrescenta uma orientação para
+o modelo usar a ferramenta de cálculo correspondente. Trechos internos (tom de voz, fluxo
+de atendimento) vêm marcados para serem seguidos, não recitados ao cliente.
 
 ## Estrutura
 

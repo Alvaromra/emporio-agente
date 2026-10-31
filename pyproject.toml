@@ -13,6 +13,8 @@ dependencies = [
     # Windows não traz a base de fusos horários do sistema; sem isto,
     # ZoneInfo("America/Campo_Grande") falha.
     "tzdata>=2024.1",
+    # Leitura do manual de políticas (puro Python, sem dependências do sistema).
+    "pypdf>=6.0,<7",
 ]
 
 [project.optional-dependencies]

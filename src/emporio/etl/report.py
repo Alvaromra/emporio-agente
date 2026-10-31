@@ -6,6 +6,7 @@ mesmo arquivo), para que as diferenças no git reflitam mudanças reais nos dado
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -43,7 +44,8 @@ def operational_alerts(orders: list[dict], reference: date) -> list[Alert]:
 
 
 def _id_key(value: str):
-    return [int(part) if part.isdigit() else part for part in value.split(",")]
+    """Ordena "2" antes de "10", "1.2" antes de "1.10" e "11,43" pelo primeiro id."""
+    return [(0, int(p), "") if p.isdigit() else (1, 0, p) for p in re.split(r"[,.]", value)]
 
 
 def render_report(
@@ -69,7 +71,16 @@ def render_report(
         "| Tabela | Registros carregados |",
         "|---|---|",
     ]
-    for table in ("categories", "products", "promotions", "customers", "orders", "order_items"):
+    tables = (
+        "categories",
+        "products",
+        "promotions",
+        "customers",
+        "orders",
+        "order_items",
+        "policy_chunks",
+    )
+    for table in tables:
         lines.append(f"| `{table}` | {len(getattr(data, table))} |")
     lines += [
         "",

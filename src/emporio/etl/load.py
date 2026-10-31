@@ -72,6 +72,15 @@ CREATE TABLE order_items (
     PRIMARY KEY (order_id, product_id)
 );
 
+-- Manual de políticas dividido por seção, para o RAG.
+CREATE TABLE policy_chunks (
+    section  TEXT PRIMARY KEY,
+    title    TEXT NOT NULL,
+    parent   TEXT,
+    heading  TEXT NOT NULL,
+    text     TEXT NOT NULL
+);
+
 CREATE TABLE data_quality_issues (
     issue_id    INTEGER PRIMARY KEY AUTOINCREMENT,
     check_code  TEXT NOT NULL,
@@ -122,7 +131,15 @@ SELECT product_id, name, category_id, category_name, category_slug,
 FROM base;
 """
 
-TABLE_ORDER = ("categories", "products", "promotions", "customers", "orders", "order_items")
+TABLE_ORDER = (
+    "categories",
+    "products",
+    "promotions",
+    "customers",
+    "orders",
+    "order_items",
+    "policy_chunks",
+)
 
 
 def _insert(conn: sqlite3.Connection, table: str, rows: list[dict]) -> None:

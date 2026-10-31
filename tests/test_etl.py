@@ -53,6 +53,7 @@ def test_contagens(etl):
         "customers": 50,
         "orders": 20,
         "order_items": 22,
+        "policy_chunks": 25,
     }
 
 
@@ -192,7 +193,10 @@ def test_relatorio_gerado(etl):
     texto = result.report_path.read_text(encoding="utf-8")
     assert "## Achados e tratamento" in texto
     assert "## Alertas operacionais" in texto
-    assert "@" not in texto
+    # Nenhum contato de cliente vaza para o relatório (o e-mail da loja pode aparecer).
+    clientes = (RAW_DIR / "customers.csv").read_text(encoding="utf-8")
+    emails = {linha.split(",")[3] for linha in clientes.splitlines()[1:]}
+    assert not any(email in texto for email in emails)
 
 
 def test_coluna_ausente_interrompe_com_erro_claro(tmp_path):
