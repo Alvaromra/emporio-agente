@@ -27,7 +27,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 |---|---|---|
 | 01 | Estrutura do projeto, configuração e relógio da loja | ✅ |
 | 02 | ETL: limpeza, carga em SQLite e relatório de qualidade | ✅ |
-| 03 | Regras de negócio determinísticas | ⏳ |
+| 03 | Regras de negócio determinísticas | ✅ |
 | 04 | Ferramentas de catálogo e pedidos | ⏳ |
 | 05 | RAG sobre o manual de políticas | ⏳ |
 | 06 | Provedores de LLM (Gemini API e Ollama) | ⏳ |
@@ -99,6 +99,37 @@ digital HMAC-SHA256 do e-mail e do telefone. Isso basta para conferir a identida
 pergunta por um pedido, mas não permite extrair contatos do banco. É a aplicação dos
 princípios de minimização e pseudonimização da LGPD. O segredo do HMAC vem de
 `EMPORIO_PII_PEPPER`.
+
+## Regras de negócio
+
+O agente nunca calcula nada "de cabeça". Tudo o que gera um número ou um prazo está em
+`src/emporio/rules/`, em funções puras e testadas, com cada constante apontando a seção do
+manual de onde veio:
+
+| Módulo | O que resolve | Manual |
+|---|---|---|
+| `payments.py` | Preço no PIX (5%, não acumula com promoção), número máximo de parcelas sem juros por faixa, pagamento combinado | 3, 3.1, 6.2 |
+| `returns.py` | Arrependimento (7 dias), troca por defeito (30 dias), troca por preferência, garantia legal (90 dias) e do fabricante | 4, 8 |
+| `store.py` | Loja aberta agora, quando reabre, dados de contato | 1.2, 2 |
+| `calendar.py` | Feriados (inclusive Páscoa móvel) e dias úteis | 2 |
+| `shipping.py` | Frete local (grátis acima de R$ 500), modalidades e prazos para outras cidades | 5 |
+
+As funções recebem a data como parâmetro em vez de consultar o relógio. Isso permite
+testar cenários como "sábado às 13h, com Finados na segunda" sem depender do dia em que os
+testes rodam.
+
+**Por que não deixar o LLM interpretar o manual?** Um modelo pode explicar uma política,
+mas contar dias corridos, dividir parcelas e respeitar faixas de valor mínimo são tarefas em
+que ele erra de forma silenciosa e plausível. Nesses casos, um erro vira propaganda enganosa
+(manual 7.1). O RAG da etapa 05 continua útil para *explicar* políticas e responder dúvidas
+abertas; os números vêm daqui.
+
+As regras também são aplicadas aos pedidos históricos no ETL, o que revelou parcelamentos
+abaixo do mínimo e pedidos PIX sem o desconto. As ambiguidades do manual e a interpretação
+adotada estão em [`docs/suposicoes.md`](docs/suposicoes.md).
+
+**Limitação conhecida:** as regras foram transcritas da versão 2.1 do manual. Se o manual
+mudar, `rules/` precisa ser atualizado junto.
 
 ## Estrutura
 

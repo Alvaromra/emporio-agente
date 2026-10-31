@@ -17,7 +17,7 @@
 - Produtos vendáveis (ativos e com estoque): **61** de 65.
 - Promoções ativas: **4** de 25.
 - Produtos com descrição não confiável: **7**.
-- Achados de qualidade: **33** em 11 tipos.
+- Achados de qualidade: **41** em 13 tipos.
 
 ## Achados e tratamento
 
@@ -27,10 +27,12 @@
 | alta | Descrição cita marca diferente da marca do nome | 7 | products 135, 136, 137, 139, 140, 142, 144 | Nome e specs são a fonte da verdade. A descrição é marcada como não confiável e não é usada pelo agente. |
 | alta | Descrição contradiz as specs (cordas, teclas ou madeira) | 5 | products 135, 137, 139, 140, 142 | Mesmo tratamento: prevalecem as specs; a descrição não é usada. |
 | média | Categoria sem nenhum produto cadastrado | 3 | categories 6, 7, 8 | O agente informa que não há itens dessa categoria no momento, sem inventar produtos. |
+| média | Parcelamento com parcela abaixo do mínimo da faixa (manual 3.1) | 3 | orders 9, 16, 18 | Histórico preservado. O agente aplica a regra vigente apenas em novas simulações e não comenta condições de pedidos passados. |
 | média | Pedido contém produto fora de linha ou em pré-lançamento | 2 | orders 3, 14 | Histórico preservado. Em pedidos em aberto, o agente não promete prazo e encaminha para a equipe. |
 | média | Total do pedido difere da soma de quantidade × preço atual | 2 | orders 3, 20 | O agente informa o total registrado e nunca recalcula: order_items não guarda o preço unitário da época, então a diferença pode ser desconto ou reajuste. |
 | média | Produto fora de linha ou em pré-lançamento com estoque positivo | 2 | products 130, 136 | O status prevalece sobre o estoque: o produto não é ofertado. |
 | baixa | Cliente de Campo Grande com código de rastreio de transportadora | 7 | orders 1, 2, 3, 4, 5, 7, 8 | O manual (5.1) prevê motoboy próprio na região. O agente informa o código existente sem afirmar qual transportadora fez a entrega. |
+| baixa | Pedido pago via PIX com total igual ao preço de tabela, sem o desconto de 5% | 5 | orders 1, 5, 10, 13, 17 | O agente informa o total registrado e não afirma se houve desconto: ele pode ter sido aplicado no pagamento sem constar no total. |
 | baixa | Produto ativo sem estoque | 1 | products 96 | Informar indisponibilidade e sugerir alternativas semelhantes (manual 7.3). |
 | baixa | Nome corrigido pela tabela explícita de correções | 1 | products 84 | Correção versionada no código, aplicada só se o nome original ainda estiver errado. |
 | baixa | Preço abaixo de 20% da mediana da categoria | 2 | products 136, 142 | Preço mantido (o sistema é a fonte oficial); sinalizado para revisão da equipe. |
@@ -73,6 +75,14 @@ Código: `category.empty`
 - categories 7: Instrumentos de Sopro (Metais)
 - categories 8: Cordas Orquestrais
 
+### Parcelamento com parcela abaixo do mínimo da faixa (manual 3.1)
+
+Código: `order.installment_below_minimum`
+
+- orders 9: 6x de R$ 58,31 sobre R$ 349,90; mínimo da faixa: R$ 80,00
+- orders 16: 6x de R$ 71,65 sobre R$ 429,90; mínimo da faixa: R$ 80,00
+- orders 18: 12x de R$ 38,32 sobre R$ 459,90; mínimo da faixa: R$ 100,00
+
 ### Pedido contém produto fora de linha ou em pré-lançamento
 
 Código: `order.item_not_released`
@@ -105,6 +115,16 @@ Código: `order.local_with_carrier_tracking`
 - orders 5: cliente em Campo Grande, código BRTP3456789BR
 - orders 7: cliente em Campo Grande, código BRKR1122334BR
 - orders 8: cliente em Campo Grande, código BRJL5544332BR
+
+### Pedido pago via PIX com total igual ao preço de tabela, sem o desconto de 5%
+
+Código: `order.pix_discount_missing`
+
+- orders 1: total R$ 11.499,00 igual ao preço de tabela, sem os 5% do PIX
+- orders 5: total R$ 4.599,00 igual ao preço de tabela, sem os 5% do PIX
+- orders 10: total R$ 8.732,00 igual ao preço de tabela, sem os 5% do PIX
+- orders 13: total R$ 1.899,00 igual ao preço de tabela, sem os 5% do PIX
+- orders 17: total R$ 689,00 igual ao preço de tabela, sem os 5% do PIX
 
 ### Produto ativo sem estoque
 

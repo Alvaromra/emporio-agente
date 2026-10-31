@@ -97,6 +97,18 @@ _CHECKS = [
         "encaminha para a equipe.",
     ),
     Check(
+        "order.installment_below_minimum", Severity.MEDIA,
+        "Parcelamento com parcela abaixo do mínimo da faixa (manual 3.1)",
+        "Histórico preservado. O agente aplica a regra vigente apenas em novas simulações "
+        "e não comenta condições de pedidos passados.",
+    ),
+    Check(
+        "order.pix_discount_missing", Severity.BAIXA,
+        "Pedido pago via PIX com total igual ao preço de tabela, sem o desconto de 5%",
+        "O agente informa o total registrado e não afirma se houve desconto: ele pode ter "
+        "sido aplicado no pagamento sem constar no total.",
+    ),
+    Check(
         "order.tracking_invalid", Severity.ALTA,
         "Código de rastreamento fora do padrão BR + 9 caracteres + BR (manual 5.3)",
         "O código não é repassado ao cliente; o caso é encaminhado para a equipe.",

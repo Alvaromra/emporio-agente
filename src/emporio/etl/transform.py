@@ -18,7 +18,14 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from emporio.etl.checks import Issue, issue
 from emporio.etl.extract import ContractError, Row
+from emporio.money import format_brl
 from emporio.privacy import fingerprint, first_name, normalize_email, normalize_phone
+from emporio.rules.payments import (
+    PIX_DISCOUNT_PERCENT,
+    installment_plan,
+    is_installment_allowed,
+    minimum_installment_cents,
+)
 from emporio.text import fold, slugify
 
 PRODUCT_STATUSES = {"active", "discontinued", "coming_soon"}
@@ -112,11 +119,6 @@ def _choice(table: str, key: object, column: str, value: str, allowed: set[str])
     if normalized not in allowed:
         raise _fail(table, key, column, value, f"esperado um de {sorted(allowed)}")
     return normalized
-
-
-def _brl(cents: int) -> str:
-    reais = f"{cents / 100:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    return f"R$ {reais}"
 
 
 # --------------------------------------------------------------------------- produtos
@@ -259,7 +261,10 @@ def _products(rows: list[Row], categories: dict[int, str], issues: list[Issue]) 
         median = Decimal(statistics.median(p["price_cents"] for p in members))
         for p in members:
             if p["price_cents"] < median * PRICE_OUTLIER_RATIO:
-                detail = f"{p['name']}: {_brl(p['price_cents'])} vs. mediana {_brl(int(median))}"
+                detail = (
+                    f"{p['name']}: {format_brl(p['price_cents'])} "
+                    f"vs. mediana {format_brl(int(median))}"
+                )
                 issues.append(issue("product.price_outlier", "products", p["product_id"], detail))
     return products
 
@@ -482,10 +487,31 @@ def _orders(
         if lines and expected != order["total_cents"]:
             diff = order["total_cents"] - expected
             detail = (
-                f"registrado {_brl(order['total_cents'])}, itens a preço atual {_brl(expected)} "
-                f"(diferença {'-' if diff < 0 else '+'}{_brl(abs(diff))})"
+                f"registrado {format_brl(order['total_cents'])}, "
+                f"itens a preço atual {format_brl(expected)} "
+                f"(diferença {'-' if diff < 0 else '+'}{format_brl(abs(diff))})"
             )
             issues.append(issue("order.total_mismatch", "orders", order["order_id"], detail))
+        if (
+            order["payment_type"] == "credit"
+            and order["installments"] > 1
+            and not is_installment_allowed(order["total_cents"], order["installments"])
+        ):
+            _, parcel = installment_plan(order["total_cents"], order["installments"])
+            minimum = minimum_installment_cents(order["installments"])
+            detail = (
+                f"{order['installments']}x de {format_brl(parcel)} sobre "
+                f"{format_brl(order['total_cents'])}; mínimo da faixa: {format_brl(minimum)}"
+            )
+            issues.append(
+                issue("order.installment_below_minimum", "orders", order["order_id"], detail)
+            )
+        if order["payment_type"] == "pix" and lines and order["total_cents"] == expected:
+            detail = (
+                f"total {format_brl(order['total_cents'])} igual ao preço de tabela, "
+                f"sem os {PIX_DISCOUNT_PERCENT}% do PIX"
+            )
+            issues.append(issue("order.pix_discount_missing", "orders", order["order_id"], detail))
         for item in lines:
             product = products[item["product_id"]]
             if product["status"] != "active":

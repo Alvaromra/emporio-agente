@@ -13,6 +13,7 @@ import pytest
 from emporio.config import PROJECT_ROOT
 from emporio.etl import run_pipeline
 from emporio.etl.extract import ContractError
+from emporio.money import apply_discount
 from emporio.privacy import fingerprint
 
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
@@ -131,6 +132,23 @@ def test_pedidos_com_total_divergente(etl):
     _, conn = etl
     assert issue_ids(conn, "order.total_mismatch") == {"3", "20"}
     assert issue_ids(conn, "order.item_not_released") == {"3", "14"}
+
+
+def test_pedidos_fora_das_regras_de_pagamento(etl):
+    _, conn = etl
+    assert issue_ids(conn, "order.installment_below_minimum") == {"9", "16", "18"}
+    assert issue_ids(conn, "order.pix_discount_missing") == {"1", "5", "10", "13", "17"}
+
+
+def test_preco_promocional_do_banco_bate_com_a_regra_em_python(etl):
+    _, conn = etl
+    rows = conn.execute(
+        "SELECT price_cents, discount_percent, final_price_cents FROM v_catalog "
+        "WHERE discount_percent IS NOT NULL"
+    ).fetchall()
+    assert rows
+    for price, discount, final in rows:
+        assert final == apply_discount(price, discount)
 
 
 def test_forma_de_pagamento_decomposta(etl):
