@@ -28,6 +28,7 @@ class Message:
     tool_name: str | None = None  # role="tool": qual ferramenta respondeu
     tool_call_id: str | None = None  # role="tool": a qual chamada responde
     raw: Any = None  # mensagem nativa do provedor (preserva metadados como thought signatures)
+    internal: bool = False  # mensagens de controle do agente, nunca exibidas ao cliente
 
     @classmethod
     def tool_result(cls, call: ToolCall, result: dict) -> Message:

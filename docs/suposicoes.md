@@ -40,5 +40,14 @@ As regras que geram números (prazos, parcelas, descontos, horários) estão em
 | M10 | O e-mail aparece como `contato@emporiodamusica.com.br` na capa e com acento (`empóriodamusica`) na tabela. | Usa-se a versão sem acento; domínio com acento é provável erro de digitação. A correção também é aplicada ao texto do manual. | `rules/store.py`, `rag/manual.py` |
 | M11 | Os dados de itens não indicam personalização, "venda final" nem boquilhas, que não são elegíveis para troca (4.4). | O agente não tem como verificar isso e informa essas exceções como condição, sem afirmar que o item se enquadra ou não. | `rules/returns.py` |
 
+## Agente
+
+| # | Situação | Suposição adotada | Onde |
+|---|---|---|---|
+| A1 | O manual pede para "sugerir lojas parceiras quando possível", mas não lista nenhuma. | O agente não indica lojas: inventar um parceiro seria pior do que não indicar. | `agent/prompt.py` |
+| A2 | O manual não dá nome ao assistente virtual. | O assistente se chama Tom (tom musical e tom de voz). Trocar o nome é uma constante. | `agent/prompt.py` |
+| A3 | O prazo de retorno de reclamações é "24 horas úteis", sem definir a jornada. | O agente informa o prazo como está no manual, sem calcular uma data. | `tools/handoff.py` |
+| A4 | O agente atende 24 horas, mas a equipe não. | Fora do expediente, o agente continua respondendo e informa quando a equipe volta (7.1). | `agent/prompt.py` |
+
 Contradições encontradas nos próprios pedidos (parcelas abaixo do mínimo, PIX sem
 desconto) estão no [relatório de qualidade](relatorio_qualidade_dados.md).

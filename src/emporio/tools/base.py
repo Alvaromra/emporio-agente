@@ -54,6 +54,38 @@ class VerificationGuard:
         return (session_id, order_id) in self.verified
 
 
+@dataclass(frozen=True)
+class Handoff:
+    protocol: str
+    session_id: str
+    reason: str
+    summary: str
+    order_id: int | None
+    created_at: datetime
+
+
+class InMemoryHandoffs:
+    """Registro de encaminhamentos em memória. A etapa 08 troca por SQLite."""
+
+    def __init__(self) -> None:
+        self.items: list[Handoff] = []
+
+    def register(
+        self, session_id: str, reason: str, summary: str, order_id: int | None, now: datetime
+    ) -> Handoff:
+        sequence = sum(1 for h in self.items if h.created_at.date() == now.date()) + 1
+        handoff = Handoff(
+            protocol=f"EM{now:%Y%m%d}-{sequence:04d}",
+            session_id=session_id,
+            reason=reason,
+            summary=summary,
+            order_id=order_id,
+            created_at=now,
+        )
+        self.items.append(handoff)
+        return handoff
+
+
 @dataclass
 class ToolContext:
     db_path: Path
@@ -61,10 +93,14 @@ class ToolContext:
     pepper: str
     session_id: str = "local"
     guard: VerificationGuard = field(default_factory=VerificationGuard)
+    handoffs: InMemoryHandoffs = field(default_factory=InMemoryHandoffs)
 
     @classmethod
     def from_settings(
-        cls, session_id: str = "local", guard: VerificationGuard | None = None
+        cls,
+        session_id: str = "local",
+        guard: VerificationGuard | None = None,
+        handoffs: InMemoryHandoffs | None = None,
     ) -> ToolContext:
         settings = get_settings()
         return cls(
@@ -73,6 +109,7 @@ class ToolContext:
             pepper=settings.pii_pepper,
             session_id=session_id,
             guard=guard or VerificationGuard(),
+            handoffs=handoffs or InMemoryHandoffs(),
         )
 
     def connect(self) -> sqlite3.Connection:

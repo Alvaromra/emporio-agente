@@ -31,7 +31,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 | 04 | Ferramentas de catálogo e pedidos | ✅ |
 | 05 | RAG sobre o manual de políticas | ✅ |
 | 06 | Provedores de LLM (Gemini API e Ollama) | ✅ |
-| 07 | Agente: persona, loop de function calling e guardrails | ⏳ |
+| 07 | Agente: persona, loop de function calling e guardrails | ✅ |
 | 08 | Persistência do histórico de conversa | ⏳ |
 | 09 | Interface web, API e CLI | ⏳ |
 | 10 | Documentação final, conversas de exemplo e avaliações | ⏳ |
@@ -65,6 +65,9 @@ python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1
 # Testa o modelo (exige GEMINI_API_KEY no .env, ou Ollama configurado)
 python -m emporio.llm --ping
 python -m emporio.llm "quanto custa o Takamine GD20?"
+
+# Conversa com o agente no terminal (--trace mostra as ferramentas chamadas)
+python -m emporio.agent --trace
 
 # Consulta o manual de políticas e mede a qualidade da recuperação
 python -m emporio.rag "me arrependi, posso devolver?"
@@ -273,6 +276,54 @@ enviar dados pessoais nesse tier. Para um protótipo com dados fictícios isso �
 produção, com clientes reais, o caminho seria o tier pago (em que os dados não são usados
 para treino) ou o Ollama local. Como mitigação adicional, a etapa 07 substitui e-mails e
 telefones por marcadores antes de enviar a mensagem ao modelo.
+
+## O agente
+
+`src/emporio/agent/` junta as peças: persona, loop de ferramentas, guardrails e proteção de
+dados pessoais.
+
+**Persona.** O assistente se chama **Tom** (tom musical e tom de voz). O manual (7.1) define
+o estilo: "informal mas profissional", como "um amigo que entende de música". O prompt pede
+respostas curtas, de conversa, com pouca formatação, e chama o cliente pelo primeiro nome
+quando ele é conhecido (7.2). O prompt é montado a cada mensagem com a data, a hora e a
+situação da loja em Campo Grande. Fora do expediente, o agente continua atendendo e avisa
+quando a equipe volta (7.1).
+
+**Estratégia de prompt.** O prompt é curto e organizado em blocos: jeito de falar, regra de
+ouro, qual ferramenta usar, dados pessoais, escopo e segurança. A regra de ouro concentra o
+que mais importa: preço, estoque, prazo, pedido ou regra só depois de consultar uma
+ferramenta, repetindo os valores como vieram. O resto do conhecimento de domínio não está no
+prompt: está nas descrições das ferramentas e nas orientações que elas devolvem junto com os
+dados (seção *Ferramentas do agente*).
+
+**Loop de ferramentas.** A cada mensagem, o modelo pode pedir ferramentas; o agente executa,
+devolve os resultados e chama o modelo de novo, até a resposta final ou o limite de 6
+rodadas. Erros de ferramenta voltam ao modelo como dados, para ele reagir. O histórico
+enviado é limitado às últimas 12 trocas, sempre cortado numa mensagem do cliente, para nunca
+separar uma chamada de ferramenta da sua resposta.
+
+**Guardrails.**
+
+- **Valores com fonte.** Todo valor em R$ da resposta precisa ter vindo de uma ferramenta ou
+  do próprio cliente (manual 7.1: nunca informar preço sem consultar o sistema). Se o modelo
+  citar um valor sem fonte, ele recebe uma instrução interna para corrigir; se insistir, a
+  resposta é trocada por uma mensagem segura que oferece a equipe.
+- **Limpeza.** Marcações internas do modelo que escapam no texto são removidas.
+- **Respostas de segurança** para resposta vazia e para excesso de rodadas.
+- **Escopo e injeção de prompt** são tratados no prompt: recusa simpática a temas fora da
+  loja, nenhuma indicação de outras lojas, e instruções do usuário ou de resultados de
+  ferramentas não mudam as regras.
+
+**Dados pessoais fora do modelo.** Antes de a mensagem ir ao LLM, e-mails e telefones viram
+marcadores (`[EMAIL_1]`, `[TELEFONE_1]`). O modelo chama as ferramentas com os marcadores, e
+o agente os troca pelos valores reais só na execução. O provedor de LLM nunca recebe o
+contato, e o registro de ferramentas chamadas guarda apenas os marcadores. CPF e números de
+cartão (validados pelo algoritmo de Luhn) não são necessários no atendimento: são removidos
+de forma irreversível, e o agente orienta o cliente a não enviá-los.
+
+**Encaminhamento.** Reclamações, atrasos e pedidos para falar com uma pessoa geram um
+protocolo (`encaminhar_para_atendente`) com o prazo de retorno do manual (24 horas úteis).
+Nesta etapa os protocolos ficam em memória; a etapa 08 os persiste.
 
 ## Estrutura
 
