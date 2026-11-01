@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Atendimento | Empório da Música</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Paleta: o verde do Pantanal e o amarelo do ipê, árvore-símbolo do Centro-Oeste. */
+  :root {
+    --mata: #123f3a;
+    --mata-escura: #0c2c28;
+    --ipe: #f2b705;
+    --papel: #f3f5f0;
+    --superficie: #ffffff;
+    --tinta: #1c2321;
+    --tinta-suave: #55605b;
+    --corda: #c9d0cb;
+    --erro: #9b2c1f;
+    --sombra: 0 1px 2px rgba(18, 63, 58, .08);
+    --fonte-titulo: "Alegreya", Georgia, "Times New Roman", serif;
+    --fonte-texto: "Alegreya Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --papel: #0f1a18;
+      --superficie: #172623;
+      --tinta: #e7ece8;
+      --tinta-suave: #9fb0a8;
+      --corda: #2c3e3a;
+      --erro: #f08a7a;
+      --sombra: none;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    flex-direction: column;
+    background: var(--papel);
+    color: var(--tinta);
+    font: 400 1.0625rem/1.5 var(--fonte-texto);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ------------------------------------------------------------ cabeçalho */
+  header {
+    position: relative;
+    overflow: hidden;
+    background: var(--mata);
+    color: #f6f3e6;
+    padding: calc(env(safe-area-inset-top, 0px) + 1.1rem) 1.25rem 1rem;
+  }
+  .cordas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    /* as cordas entram pela direita e somem antes do nome da loja */
+    -webkit-mask-image: linear-gradient(to left, #000 0%, #000 25%, transparent 70%);
+    mask-image: linear-gradient(to left, #000 0%, #000 25%, transparent 70%);
+  }
+  .cordas line { stroke: var(--ipe); stroke-width: 1; opacity: .4; }
+  .cordas line:nth-child(n+4) { opacity: .28; }
+  .topo {
+    position: relative;
+    max-width: 46rem;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: .5rem 1rem;
+  }
+  h1 {
+    margin: 0;
+    font: 700 clamp(1.6rem, 4vw, 2.1rem)/1.05 var(--fonte-titulo);
+    letter-spacing: -.01em;
+  }
+  .slogan { margin: .2rem 0 0; color: #c9d8d2; font-size: .98rem; }
+  .controles { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+  .situacao {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .3rem .7rem;
+    border-radius: 999px;
+    background: var(--mata-escura);
+    font-size: .9rem;
+  }
+  .situacao::before {
+    content: "";
+    width: .55rem;
+    height: .55rem;
+    border-radius: 50%;
+    background: #8a9a94;
+  }
+  .situacao.aberta::before { background: var(--ipe); }
+  .alternar {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .9rem;
+    color: #c9d8d2;
+    cursor: pointer;
+  }
+  .alternar input { accent-color: var(--ipe); width: 1rem; height: 1rem; }
+
+  /* ------------------------------------------------------------ conversa */
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 1.25rem 1rem;
+  }
+  .conversa {
+    max-width: 46rem;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: .9rem;
+  }
+  .msg { max-width: 85%; }
+  .msg .balao {
+    padding: .7rem .95rem;
+    border-radius: 1.1rem;
+    overflow-wrap: anywhere;
+  }
+  .msg p { margin: 0; }
+  .msg p + p, .msg ul + p, .msg p + ul { margin-top: .5rem; }
+  .msg ul { margin: .35rem 0 0; padding-left: 1.15rem; }
+  .msg li + li { margin-top: .15rem; }
+  .msg strong { font-weight: 700; }
+  .tom { align-self: flex-start; }
+  .tom .balao {
+    background: var(--superficie);
+    border: 1px solid var(--corda);
+    border-top-left-radius: .3rem;
+    box-shadow: var(--sombra);
+  }
+  .tom .autor {
+    display: block;
+    margin: 0 0 .2rem .2rem;
+    font: 700 .95rem/1 var(--fonte-titulo);
+    color: var(--mata);
+  }
+  @media (prefers-color-scheme: dark) { .tom .autor { color: var(--ipe); } }
+  .cliente { align-self: flex-end; }
+  .cliente .balao {
+    background: var(--mata);
+    color: #f6f3e6;
+    border-top-right-radius: .3rem;
+  }
+  .erro .balao { border-color: var(--erro); color: var(--erro); }
+
+  /* modo equipe: o que o agente consultou para responder */
+  .bastidores {
+    display: none;
+    margin: .4rem 0 0 .2rem;
+    font-size: .85rem;
+    color: var(--tinta-suave);
+  }
+  body.equipe .bastidores { display: block; }
+  .bastidores code {
+    font: .8rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+  .bastidores div + div { margin-top: .15rem; }
+
+  /* sugestões iniciais */
+  .sugestoes { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .2rem; }
+  .sugestoes button {
+    font: inherit;
+    font-size: .95rem;
+    color: var(--mata);
+    background: transparent;
+    border: 1px solid var(--mata);
+    border-radius: 999px;
+    padding: .4rem .85rem;
+    cursor: pointer;
+  }
+  @media (prefers-color-scheme: dark) {
+    .sugestoes button { color: var(--ipe); border-color: var(--ipe); }
+  }
+  .sugestoes button:hover { background: rgba(18, 63, 58, .07); }
+
+  /* digitando: três cordas vibrando */
+  .digitando .balao { display: inline-flex; padding: .9rem 1rem; }
+  .digitando svg { width: 2.6rem; height: 1rem; }
+  .digitando line { stroke: var(--mata); stroke-width: 1.4; stroke-linecap: round; }
+  @media (prefers-color-scheme: dark) { .digitando line { stroke: var(--ipe); } }
+  .digitando line { animation: vibrar .9s ease-in-out infinite; }
+  .digitando line:nth-child(2) { animation-delay: .15s; }
+  .digitando line:nth-child(3) { animation-delay: .3s; }
+
+  @keyframes vibrar {
+    0%, 100% { transform: translateY(0); }
+    20% { transform: translateY(-1.6px); }
+    40% { transform: translateY(1.3px); }
+    60% { transform: translateY(-.8px); }
+    80% { transform: translateY(.4px); }
+  }
+  /* o único movimento automático: as cordas do cabeçalho vibram uma vez ao abrir */
+  .cordas line { animation: vibrar 1.1s ease-out 1; }
+  .cordas line:nth-child(2) { animation-delay: .06s; }
+  .cordas line:nth-child(3) { animation-delay: .12s; }
+  .cordas line:nth-child(4) { animation-delay: .18s; }
+  .cordas line:nth-child(5) { animation-delay: .24s; }
+  .cordas line:nth-child(6) { animation-delay: .3s; }
+  @media (prefers-reduced-motion: reduce) {
+    .cordas line, .digitando line { animation: none; }
+  }
+
+  /* ------------------------------------------------------------ envio */
+  footer {
+    border-top: 1px solid var(--corda);
+    background: var(--papel);
+    padding: .75rem 1.25rem calc(env(safe-area-inset-bottom, 0px) + .75rem);
+  }
+  form {
+    max-width: 46rem;
+    margin: 0 auto;
+    display: flex;
+    gap: .6rem;
+    align-items: flex-end;
+  }
+  textarea:focus-visible { outline-offset: 0; }
+  textarea {
+    flex: 1;
+    resize: none;
+    max-height: 9rem;
+    font: inherit;
+    color: var(--tinta);
+    background: var(--superficie);
+    border: 1px solid var(--corda);
+    border-radius: 1.2rem;
+    padding: .6rem .95rem;
+  }
+  .enviar {
+    font: 700 1rem/1 var(--fonte-texto);
+    color: var(--mata-escura);
+    background: var(--ipe);
+    border: 0;
+    border-radius: 1.2rem;
+    padding: .8rem 1.15rem;
+    cursor: pointer;
+  }
+  .enviar:disabled { opacity: .55; cursor: wait; }
+  .rodape {
+    max-width: 46rem;
+    margin: .5rem auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .25rem 1rem;
+    font-size: .85rem;
+    color: var(--tinta-suave);
+  }
+  .rodape button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .rodape .acoes { display: flex; gap: 1rem; }
+
+  :focus-visible { outline: 2px solid var(--ipe); outline-offset: 2px; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+
+  @media (max-width: 520px) {
+    .msg { max-width: 92%; }
+    .enviar { padding: .8rem .9rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <svg class="cordas" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 60">
+    <line x1="0" y1="8" x2="100" y2="8"></line>
+    <line x1="0" y1="17" x2="100" y2="17"></line>
+    <line x1="0" y1="26" x2="100" y2="26"></line>
+    <line x1="0" y1="35" x2="100" y2="35"></line>
+    <line x1="0" y1="44" x2="100" y2="44"></line>
+    <line x1="0" y1="53" x2="100" y2="53"></line>
+  </svg>
+  <div class="topo">
+    <div>
+      <h1>Empório da Música</h1>
+      <p class="slogan">Sua música começa aqui.</p>
+    </div>
+    <div class="controles">
+      <span class="situacao" id="situacao" title="">Consultando horário…</span>
+      <label class="alternar">
+        <input type="checkbox" id="equipe">
+        Mostrar consultas
+      </label>
+    </div>
+  </div>
+</header>
+
+<main id="rolagem">
+  <div class="conversa" id="conversa" aria-live="polite" aria-relevant="additions"></div>
+</main>
+
+<footer>
+  <form id="formulario">
+    <label for="texto" class="sr-only">Sua mensagem</label>
+    <textarea id="texto" rows="1" maxlength="1000" placeholder="Escreva sua mensagem" autocomplete="off"></textarea>
+    <button class="enviar" id="enviar" type="submit">Enviar</button>
+  </form>
+  <div class="rodape">
+    <span>Não envie CPF nem dados de cartão por aqui.</span>
+    <span class="acoes">
+      <button type="button" id="nova">Nova conversa</button>
+      <button type="button" id="apagar">Apagar conversa</button>
+    </span>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const CHAVE_SESSAO = "emporio.sessao";
+  const CHAVE_EQUIPE = "emporio.equipe";
+  const SUGESTOES = [
+    "Quais violões vocês têm até R$ 1.000?",
+    "Vocês estão abertos agora?",
+    "Quero saber do meu pedido",
+    "Como funciona a troca?",
+  ];
+
+  const conversa = document.getElementById("conversa");
+  const rolagem = document.getElementById("rolagem");
+  const formulario = document.getElementById("formulario");
+  const texto = document.getElementById("texto");
+  const enviar = document.getElementById("enviar");
+  const equipe = document.getElementById("equipe");
+
+  let sessao = lerArmazenado(CHAVE_SESSAO);
+  let ocupado = false;
+
+  function lerArmazenado(chave) {
+    try { return localStorage.getItem(chave); } catch { return null; }
+  }
+  function gravarArmazenado(chave, valor) {
+    try {
+      if (valor === null) localStorage.removeItem(chave);
+      else localStorage.setItem(chave, valor);
+    } catch { /* navegação privada: segue sem lembrar */ }
+  }
+
+  // Markdown mínimo e seguro: escapa todo HTML antes de aplicar negrito e listas.
+  function escapar(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  const juntarMoeda = (s) => s.replace(/R\$\s/g, "R$\u00a0");
+  function formatar(bruto) {
+    const blocos = escapar(juntarMoeda(bruto.trim())).split(/\n{2,}/);
+    return blocos.map((bloco) => {
+      const linhas = bloco.split("\n");
+      if (linhas.every((l) => /^\s*[-*•]\s+/.test(l))) {
+        return "<ul>" + linhas.map((l) => "<li>" + enfatizar(l.replace(/^\s*[-*•]\s+/, "")) + "</li>").join("") + "</ul>";
+      }
+      const partes = [];
+      let lista = [];
+      for (const l of linhas) {
+        if (/^\s*[-*•]\s+/.test(l)) { lista.push("<li>" + enfatizar(l.replace(/^\s*[-*•]\s+/, "")) + "</li>"); continue; }
+        if (lista.length) { partes.push("<ul>" + lista.join("") + "</ul>"); lista = []; }
+        partes.push(enfatizar(l));
+      }
+      if (lista.length) partes.push("<ul>" + lista.join("") + "</ul>");
+      return "<p>" + partes.join("<br>").replace(/<br><ul>/g, "</p><ul>").replace(/<\/ul><br>/g, "</ul><p>") + "</p>";
+    }).join("").replace(/<p><\/p>/g, "");
+  }
+  function enfatizar(s) {
+    return s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g, "$1<em>$2</em>");
+  }
+
+  function rolarParaFim() {
+    rolagem.scrollTo({ top: rolagem.scrollHeight, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
+  function adicionar(autor, conteudo, extras = {}) {
+    const msg = document.createElement("div");
+    msg.className = "msg " + autor + (extras.erro ? " erro" : "");
+    if (autor === "tom") {
+      const nome = document.createElement("span");
+      nome.className = "autor";
+      nome.textContent = "Tom";
+      msg.appendChild(nome);
+    }
+    const balao = document.createElement("div");
+    balao.className = "balao";
+    if (autor === "tom") balao.innerHTML = formatar(conteudo);
+    else balao.textContent = juntarMoeda(conteudo);
+    msg.appendChild(balao);
+    if (extras.ferramentas && extras.ferramentas.length) {
+      const bastidores = document.createElement("div");
+      bastidores.className = "bastidores";
+      for (const f of extras.ferramentas) {
+        const linha = document.createElement("div");
+        const codigo = document.createElement("code");
+        codigo.textContent = `${f.nome}(${JSON.stringify(f.argumentos)})`;
+        linha.append(codigo, ` ${f.ok ? "ok" : "erro"}, ${f.ms} ms`);
+        bastidores.appendChild(linha);
+      }
+      if (extras.tempo) {
+        const total = document.createElement("div");
+        total.textContent = `Resposta em ${extras.tempo.toFixed(1)} s` + (extras.eventos && extras.eventos.length ? `. ${extras.eventos.join("; ")}` : "");
+        bastidores.appendChild(total);
+      }
+      msg.appendChild(bastidores);
+    }
+    conversa.appendChild(msg);
+    rolarParaFim();
+    return msg;
+  }
+
+  function boasVindas() {
+    conversa.innerHTML = "";
+    adicionar("tom", "Oi! Eu sou o Tom, da Empório da Música. Posso te ajudar com instrumentos, preços, seus pedidos e as regras da loja.");
+    const sugestoes = document.createElement("div");
+    sugestoes.className = "sugestoes";
+    sugestoes.id = "sugestoes";
+    for (const s of SUGESTOES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = s;
+      b.addEventListener("click", () => mandar(s));
+      sugestoes.appendChild(b);
+    }
+    conversa.appendChild(sugestoes);
+  }
+
+  function mostrarDigitando() {
+    const msg = document.createElement("div");
+    msg.className = "msg tom digitando";
+    msg.innerHTML = '<span class="autor">Tom</span><div class="balao"><span class="sr-only">Tom está digitando</span>' +
+      '<svg viewBox="0 0 26 10" aria-hidden="true"><line x1="1" y1="2" x2="25" y2="2"></line><line x1="1" y1="5" x2="25" y2="5"></line><line x1="1" y1="8" x2="25" y2="8"></line></svg></div>';
+    conversa.appendChild(msg);
+    rolarParaFim();
+    return msg;
+  }
+
+  async function api(caminho, opcoes = {}) {
+    const resposta = await fetch(caminho, { headers: { "Content-Type": "application/json" }, ...opcoes });
+    if (resposta.status === 204) return null;
+    const corpo = await resposta.json().catch(() => ({}));
+    if (!resposta.ok) {
+      const detalhe = typeof corpo.detail === "string" ? corpo.detail : "Resposta inválida do servidor.";
+      const erro = new Error(detalhe);
+      erro.status = resposta.status;
+      throw erro;
+    }
+    return corpo;
+  }
+
+  async function garantirSessao() {
+    if (sessao) return sessao;
+    const { id } = await api("/api/conversas", { method: "POST" });
+    sessao = id;
+    gravarArmazenado(CHAVE_SESSAO, id);
+    return id;
+  }
+
+  async function mandar(mensagem) {
+    mensagem = mensagem.trim();
+    if (!mensagem || ocupado) return;
+    ocupado = true;
+    enviar.disabled = true;
+    document.getElementById("sugestoes")?.remove();
+    adicionar("cliente", mensagem);
+    texto.value = "";
+    ajustarAltura();
+    const digitando = mostrarDigitando();
+    try {
+      let id = await garantirSessao();
+      let r;
+      try {
+        r = await api(`/api/conversas/${id}/mensagens`, { method: "POST", body: JSON.stringify({ texto: mensagem }) });
+      } catch (e) {
+        if (e.status !== 404) throw e;
+        sessao = null;  // conversa apagada ou expirada: começa outra
+        id = await garantirSessao();
+        r = await api(`/api/conversas/${id}/mensagens`, { method: "POST", body: JSON.stringify({ texto: mensagem }) });
+      }
+      digitando.remove();
+      adicionar("tom", r.resposta, { ferramentas: r.ferramentas, tempo: r.tempo_s, eventos: r.eventos });
+    } catch (e) {
+      digitando.remove();
+      adicionar("tom", `Não consegui responder agora. ${e.message} Tente de novo em instantes.`, { erro: true });
+    } finally {
+      ocupado = false;
+      enviar.disabled = false;
+      texto.focus();
+    }
+  }
+
+  async function carregarHistorico() {
+    if (!sessao) return boasVindas();
+    try {
+      const { mensagens } = await api(`/api/conversas/${sessao}`);
+      if (!mensagens.length) return boasVindas();
+      conversa.innerHTML = "";
+      for (const m of mensagens) adicionar(m.autor, m.texto);
+    } catch {
+      sessao = null;
+      gravarArmazenado(CHAVE_SESSAO, null);
+      boasVindas();
+    }
+  }
+
+  async function carregarSituacao() {
+    const el = document.getElementById("situacao");
+    try {
+      const loja = await api("/api/loja");
+      el.textContent = loja.aberta
+        ? loja.situacao.replace("Aberta agora, até as ", "Aberta até ").replace(/\.$/, "")
+        : loja.situacao.split(". ")[0].replace("Fechada agora", "Fechada");
+      el.title = loja.situacao + " " + loja.horario;
+      el.classList.toggle("aberta", loja.aberta);
+    } catch {
+      el.textContent = "Horário indisponível";
+    }
+  }
+
+  function ajustarAltura() {
+    texto.style.height = "auto";
+    texto.style.height = Math.min(texto.scrollHeight, 144) + "px";
+  }
+
+  formulario.addEventListener("submit", (e) => { e.preventDefault(); mandar(texto.value); });
+  texto.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); mandar(texto.value); }
+  });
+  texto.addEventListener("input", ajustarAltura);
+
+  equipe.checked = lerArmazenado(CHAVE_EQUIPE) === "1";
+  document.body.classList.toggle("equipe", equipe.checked);
+  equipe.addEventListener("change", () => {
+    document.body.classList.toggle("equipe", equipe.checked);
+    gravarArmazenado(CHAVE_EQUIPE, equipe.checked ? "1" : "0");
+  });
+
+  document.getElementById("nova").addEventListener("click", () => {
+    sessao = null;
+    gravarArmazenado(CHAVE_SESSAO, null);
+    boasVindas();
+    texto.focus();
+  });
+  document.getElementById("apagar").addEventListener("click", async () => {
+    if (!sessao) { boasVindas(); return; }
+    if (!confirm("Apagar esta conversa? Ela será removida dos registros da loja.")) return;
+    try { await api(`/api/conversas/${sessao}`, { method: "DELETE" }); } catch { /* já não existia */ }
+    sessao = null;
+    gravarArmazenado(CHAVE_SESSAO, null);
+    boasVindas();
+  });
+
+  carregarSituacao();
+  carregarHistorico();
+  texto.focus();
+})();
+</script>
+</body>
+</html>

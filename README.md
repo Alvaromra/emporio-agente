@@ -33,7 +33,7 @@ As justificativas completas de cada decisão estarão na seção *Decisões téc
 | 06 | Provedores de LLM (Gemini API e Ollama) | ✅ |
 | 07 | Agente: persona, loop de function calling e guardrails | ✅ |
 | 08 | Persistência do histórico de conversa | ✅ |
-| 09 | Interface web, API e CLI | ⏳ |
+| 09 | Interface web, API e CLI | ✅ |
 | 10 | Documentação final, conversas de exemplo e avaliações | ⏳ |
 
 ## Como rodar
@@ -65,6 +65,9 @@ python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1
 # Testa o modelo (exige GEMINI_API_KEY no .env, ou Ollama configurado)
 python -m emporio.llm --ping
 python -m emporio.llm "quanto custa o Takamine GD20?"
+
+# Interface web: abra http://localhost:8000 (API documentada em /docs)
+python -m emporio.web
 
 # Conversa com o agente no terminal (--trace mostra as ferramentas chamadas)
 python -m emporio.agent --trace
@@ -364,6 +367,38 @@ consultar um pedido. É o preço de nunca gravar o dado pessoal.
 **Retenção e exclusão.** Conversas sem atividade há mais de 90 dias (`EMPORIO_RETENTION_DAYS`)
 são apagadas por `python -m emporio.memory --purgar`, pensado para rodar num agendador. A
 exclusão a pedido do cliente, prevista no manual (seção 9), é `--apagar ID`.
+
+## Interface e API
+
+O agente tem três formas de uso, todas sobre o mesmo `Agent`:
+
+| Interface | Comando | Para quê |
+|---|---|---|
+| Web | `python -m emporio.web` | Atendimento ao cliente, no navegador do computador ou do celular |
+| API HTTP | mesma do item acima, em `/docs` | Integrar outro canal (ex.: WhatsApp) sem tocar no agente |
+| Terminal | `python -m emporio.agent --trace` | Desenvolvimento e depuração |
+
+**Web leve.** A página é um único arquivo HTML com CSS e JavaScript próprios, sem framework
+nem etapa de build: o servidor Python é tudo o que precisa rodar. Ela mostra se a loja está
+aberta agora, sugere perguntas iniciais, lembra a conversa ao recarregar a página e tem modo
+claro e escuro. A identidade visual usa o verde do Pantanal e o amarelo do ipê, árvore-símbolo
+do Centro-Oeste, com seis cordas de violão no cabeçalho, que também viram o indicador de
+"digitando".
+
+**Modo "Mostrar consultas".** Um interruptor exibe, abaixo de cada resposta, as ferramentas que
+o agente chamou, com os argumentos e o tempo. Serve à equipe da loja e a quem avalia o projeto:
+dá para ver que um preço veio de `detalhar_produto`, e não da imaginação do modelo.
+
+**Cuidados.** As respostas do modelo passam por um renderizador de Markdown mínimo que escapa
+todo HTML antes de aplicar negrito e listas, para que nada do que o modelo ou o cliente
+escrever vire código na página. Mensagens têm limite de 1.000 caracteres. Duas mensagens
+simultâneas na mesma conversa são serializadas por uma trava. Se a chave da Gemini API
+faltar, o servidor sobe mesmo assim e a página explica o problema. O rodapé lembra o cliente
+de não enviar CPF ou cartão e oferece "Apagar conversa", que remove a conversa dos registros
+(manual, seção 9).
+
+**Na rede local.** `python -m emporio.web --host 0.0.0.0` deixa a página acessível por outros
+aparelhos da mesma rede, como um celular, pelo IP do computador na porta 8000.
 
 ## Estrutura
 

@@ -18,6 +18,9 @@ dependencies = [
     # Provedores de LLM: Gemini API (padrão) e Ollama (local).
     "google-genai>=2.0,<3",
     "ollama>=0.6,<1",
+    # Interface web e API.
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.30,<1",
 ]
 
 [project.optional-dependencies]
@@ -32,9 +35,13 @@ emporio-etl = "emporio.etl.__main__:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+emporio = ["web/static/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
 
 [tool.ruff]
 line-length = 100
