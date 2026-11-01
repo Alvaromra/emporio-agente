@@ -64,6 +64,7 @@ def test_detalhe_com_promocao_mostra_original_e_percentual(make_ctx):
         "R$ 549,00",
         "20%",
     )
+    assert result["preco_para_o_cliente"] == "R$ 439,20 (de R$ 549,00, 20% de desconto)"
     assert any("não se aplica a preços promocionais" in linha for linha in result["pagamento"])
 
 

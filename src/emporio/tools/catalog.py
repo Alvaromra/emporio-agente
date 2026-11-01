@@ -57,11 +57,14 @@ def price_info(row: sqlite3.Row) -> dict:
     if row["discount_percent"] is None:
         return {"preco": format_brl(row["price_cents"])}
     # Manual 6.2: preço promocional sempre junto do original e do percentual.
+    final, original = format_brl(row["final_price_cents"]), format_brl(row["price_cents"])
+    percent = f"{row['discount_percent']}%"
     return {
-        "preco": format_brl(row["final_price_cents"]),
-        "preco_original": format_brl(row["price_cents"]),
-        "desconto": f"{row['discount_percent']}%",
+        "preco": final,
+        "preco_original": original,
+        "desconto": percent,
         "promocao": row["promotion_label"],
+        "preco_para_o_cliente": f"{final} (de {original}, {percent} de desconto)",
     }
 
 

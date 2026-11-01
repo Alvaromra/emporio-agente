@@ -19,6 +19,10 @@ from emporio.llm import LLMError, get_provider
 REPORT_PATH = PROJECT_ROOT / "docs" / "avaliacao.md"
 
 
+def _announce(path) -> None:
+    print(f"  gerado {path.relative_to(PROJECT_ROOT)}", flush=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m emporio.evals")
     parser.add_argument("--exemplos", action="store_true", help="gera as conversas de exemplo")
@@ -34,8 +38,11 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Modelo: {provider.model} via {provider.name}\n")
 
     if args.exemplos:
-        for path in generate(provider, pause_s=args.pausa / 2):
-            print(f"  gerado {path.relative_to(PROJECT_ROOT)}")
+        try:
+            generate(provider, pause_s=args.pausa / 2, on_written=_announce)
+        except LLMError as error:
+            print(f"\nErro: {error}\nOs exemplos gerados antes do erro foram mantidos.")
+            return 1
         return 0
 
     scenarios = load_scenarios()

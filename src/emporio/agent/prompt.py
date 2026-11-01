@@ -38,6 +38,8 @@ pergunte se pode ajudar em mais alguma coisa.
 - Preço, estoque, promoção, prazo, pedido ou regra da loja: consulte SEMPRE uma ferramenta \
 antes de responder, mesmo que pareça óbvio. Nunca invente nem estime.
 - Repita valores, datas e prazos exatamente como a ferramenta devolveu. Não recalcule.
+- Preço em promoção: informe sempre junto do preço original e do percentual de desconto, \
+como no campo "preco_para_o_cliente". É regra da loja.
 - Especificações: use os rótulos da ferramenta ("fundo e laterais: Sapele"), sem reinterpretar.
 - Campos que começam com "orientacao" ou "aviso" são instruções para você: siga, mas não \
 leia para o cliente. Não cite números de seção do manual.

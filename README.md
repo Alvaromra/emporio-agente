@@ -71,7 +71,7 @@ O projeto é avaliado em três níveis:
 
 - **Testes automatizados** (`pytest`): cobrem ETL, regras, ferramentas, RAG, provedores,
   agente, persistência e API, sem rede, com um modelo roteirizado no lugar do LLM. Rodam a
-  cada push no GitHub Actions, em Python 3.11 e 3.12.
+  cada push no GitHub Actions, em Python 3.11, 3.12 e 3.14.
 - **Recuperação do manual** (`python -m emporio.rag --eval`): 28 perguntas escritas como um
   cliente escreveria; hit@3 de 100% e MRR de 0,96.
 - **Ponta a ponta com o modelo real** (`python -m emporio.evals`): 15 cenários em
@@ -419,7 +419,10 @@ Uma mudança no manual exige mudança no código; um teste que compare as consta
 do manual reduziria o risco de divergência.
 
 **Custo e latência.** Cada mensagem faz de 2 a 3 chamadas ao modelo, e as respostas levam de 5
-a 15 segundos no tier gratuito. Com mais tempo: respostas em streaming na interface, cache de
+a 15 segundos no tier gratuito. Esse tier limita o Gemma 4 a 16 mil tokens de entrada por
+minuto, e cada chamada envia cerca de 3 mil (persona, ferramentas e histórico). Quando o
+limite é atingido, o provedor espera o tempo que a própria API indica e repete a chamada; se a
+espera for longa demais (cota diária), devolve o erro na hora. Com mais tempo: respostas em streaming na interface, cache de
 consultas frequentes e uso do modelo menor para mensagens simples.
 
 **Operação.** O encaminhamento registra o protocolo, mas não notifica a equipe; não há

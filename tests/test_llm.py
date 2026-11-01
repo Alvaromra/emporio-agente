@@ -108,9 +108,61 @@ def test_gemini_complete_envia_sistema_ferramentas_e_desliga_execucao_automatica
 )
 def test_gemini_erros_amigaveis(code, hint):
     error = errors.ClientError(code, {"error": {"code": code, "message": "x", "status": "X"}})
-    provider = gemini.GeminiProvider(client=SimpleNamespace(models=FakeModels(error)))
+    provider = gemini.GeminiProvider(
+        client=SimpleNamespace(models=FakeModels(error)), sleep=lambda seconds: None
+    )
     with pytest.raises(LLMError, match=hint):
         provider.complete("s", [Message("user", "oi")], [])
+
+
+def quota_error(delay: str) -> errors.ClientError:
+    body = {
+        "error": {
+            "code": 429,
+            "message": f"Quota exceeded. Please retry in {delay}.",
+            "status": "RESOURCE_EXHAUSTED",
+            "details": [{"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": delay}],
+        }
+    }
+    return errors.ClientError(429, body)
+
+
+class FlakyModels:
+    """Falha com 429 nas primeiras chamadas e depois responde."""
+
+    def __init__(self, failures):
+        self.failures = list(failures)
+
+    def generate_content(self, **kwargs):
+        if self.failures:
+            raise self.failures.pop(0)
+        return gemini_response(types.Part(text="ok"))
+
+
+def test_gemini_espera_o_tempo_pedido_pela_api_e_repete():
+    waits = []
+    models = FlakyModels([quota_error("24s"), quota_error("5.8s")])
+    provider = gemini.GeminiProvider(client=SimpleNamespace(models=models), sleep=waits.append)
+    assert provider.complete("s", [Message("user", "oi")], []).text == "ok"
+    assert waits == [25.0, pytest.approx(6.8)]
+
+
+def test_gemini_cota_diaria_nao_segura_o_cliente():
+    waits = []
+    models = FlakyModels([quota_error("3600s")])
+    provider = gemini.GeminiProvider(client=SimpleNamespace(models=models), sleep=waits.append)
+    with pytest.raises(LLMError, match="Limite de uso"):
+        provider.complete("s", [Message("user", "oi")], [])
+    assert waits == []
+
+
+def test_gemini_desiste_depois_de_algumas_tentativas():
+    waits = []
+    models = FlakyModels([quota_error("1s")] * 10)
+    provider = gemini.GeminiProvider(client=SimpleNamespace(models=models), sleep=waits.append)
+    with pytest.raises(LLMError):
+        provider.complete("s", [Message("user", "oi")], [])
+    assert len(waits) == gemini.RATE_LIMIT_RETRIES
 
 
 def test_gemini_sem_chave():

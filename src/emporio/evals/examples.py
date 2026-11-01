@@ -31,7 +31,10 @@ NOTE = (
 
 
 def generate(
-    provider: LLMProvider, pause_s: float = 0, output_dir: Path = OUTPUT_DIR
+    provider: LLMProvider,
+    pause_s: float = 0,
+    output_dir: Path = OUTPUT_DIR,
+    on_written=None,
 ) -> list[Path]:
     examples = json.loads(EXAMPLES_PATH.read_text(encoding="utf-8"))
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -55,4 +58,6 @@ def generate(
             target = output_dir / example["arquivo"]
             target.write_text(f"{header}\n\n{context}\n{NOTE}\n{conversation}", encoding="utf-8")
             written.append(target)
+            if on_written:
+                on_written(target)  # avisa a cada arquivo: um erro depois não apaga o progresso
     return written
