@@ -13,7 +13,7 @@ consultar cada um, e encaminha para a equipe o que não consegue resolver.
 | Decisão | Escolha | Por quê |
 |---|---|---|
 | Abordagem do agente | **Híbrida.** Function calling com 9 ferramentas: SQL parametrizado para dados da loja, RAG para o manual, regras de negócio em código. Loop próprio, sem framework de agentes. | Preço, estoque e pedido são consultas exatas, não similaridade de texto. O modelo decide qual ferramenta usar; o código calcula. [Detalhes](#ferramentas-do-agente) |
-| Modelo e provedor | **Gemma 4** (`gemma-4-26b-a4b-it`) via Gemini API como padrão; `gemma4:e4b` via Ollama como alternativa local. | Function calling nativo, pesos abertos, e o mesmo modelo pode rodar fora da nuvem. [Detalhes](#modelo-e-provedor) |
+| Modelo e provedor | **Gemma 4** (`gemma-4-26b-a4b-it`) via Gemini API como padrão; `gemma4:e4b` via Ollama como alternativa local, implementada e testada com cliente simulado, mas ainda não avaliada com o modelo real. | Function calling nativo, pesos abertos, e o mesmo modelo pode rodar fora da nuvem. [Detalhes](#modelo-e-provedor) |
 | Retrieval | Manual dividido pelas próprias seções numeradas; **BM25 com sinônimos**; avaliado com 28 perguntas (hit@3 de 100%). | 25 trechos de vocabulário estreito: busca lexical é exata, explicável e mensurável. [Detalhes](#rag-sobre-o-manual-de-políticas) |
 | Estratégia de prompt | Persona curta com uma "regra de ouro" (nada sem consultar o sistema); conhecimento de domínio nas descrições e orientações das ferramentas. | Prompt enxuto e regras perto dos dados que elas governam. [Detalhes](#o-agente) |
 | Interface | **Web** em um único HTML, sem build; **API** FastAPI documentada; **CLI** para depuração. | Leve de rodar e de avaliar; a API permite plugar outro canal. [Detalhes](#interface-e-api) |
@@ -254,8 +254,9 @@ início, foi descartado por não ter function calling nativo.
 **Por que o 26B A4B como padrão.** É um modelo MoE: tem qualidade de modelo grande, mas ativa
 cerca de 4B parâmetros por token, o que o torna rápido. Relatos públicos indicam que a
 confiabilidade de chamadas de ferramenta das variantes menores (E2B/E4B) é inferior; por
-isso a variante local fica como alternativa, e a qualidade de cada uma será comparada nas
-avaliações da etapa 10.
+isso a variante local fica como alternativa. Todos os testes com modelo real (avaliação
+ponta a ponta e conversas de exemplo) usaram a Gemini API: o provedor Ollama foi
+implementado e testado com um cliente simulado, mas não foi avaliado com o modelo real.
 
 **Sem framework de agentes.** A interface é fina: tipos neutros de mensagem (`Message`,
 `ToolCall`) e um método `complete()` por provedor. Cada provedor converte o histórico e as
@@ -402,7 +403,12 @@ aparelhos da mesma rede, como um celular, pelo IP do computador na porta 8000.
 **Avaliação.** Os conjuntos de avaliação são pequenos e foram escritos junto com o sistema;
 medem regressão, não generalização. Com mais tempo: um conjunto maior, escrito por outra
 pessoa ou extraído de conversas reais, e critérios qualitativos (tom, clareza) avaliados por
-um segundo modelo como juiz, além de comparar o modelo local com o da API no mesmo conjunto.
+um segundo modelo como juiz.
+
+**Modelo local não avaliado.** O provedor Ollama está implementado e coberto por testes com
+cliente simulado, mas não foi executado com o Gemma 4 real. O próximo passo seria rodar
+`python -m emporio.evals` com `EMPORIO_LLM_PROVIDER=ollama` e comparar com a Gemini API no
+mesmo conjunto de cenários, em qualidade e latência.
 
 **Uma instância só.** O cofre de dados pessoais e o limite de tentativas de verificação
 vivem na memória do processo. Com mais de um servidor, eles precisariam de um armazenamento
