@@ -1,89 +1,84 @@
 # Empório da Música: agente de atendimento
 
-Protótipo de um agente de mensagens de texto que atende clientes da Empório da Música
-(loja de instrumentos musicais em Campo Grande/MS), respondendo dúvidas recorrentes sobre
-produtos, preços, disponibilidade, pedidos e políticas da loja.
+Protótipo de um agente de mensagens de texto para a Empório da Música, loja de instrumentos
+musicais em Campo Grande/MS. O assistente, chamado **Tom**, responde às dúvidas que hoje
+sobrecarregam a equipe: preço e disponibilidade de produtos, status de pedidos, trocas e
+devoluções, horários, pagamento e frete. Ele usa os dados e o manual da loja, sabe quando
+consultar cada um, e encaminha para a equipe o que não consegue resolver.
 
 > Projeto desenvolvido para o desafio técnico de AI Engineer da Artefact.
-> Status: **em construção**. Este README cresce a cada etapa.
 
-## Visão geral da arquitetura
+## Decisões técnicas em resumo
 
-O agente segue uma abordagem **híbrida**:
-
-- **Dados estruturados** (catálogo, estoque, promoções, pedidos) são consultados por
-  ferramentas com SQL parametrizado sobre um SQLite gerado a partir dos CSVs.
-- **Texto não estruturado** (manual de políticas) é consultado via RAG.
-- **Regras de negócio** (parcelamento, desconto no PIX, prazos de devolução, horário de
-  funcionamento) são código determinístico e testado.
-- O **LLM** (família Gemma) orquestra: entende a mensagem, escolhe a ferramenta e redige a
-  resposta com a persona da loja. Ele não calcula nem inventa dados.
-
-As justificativas completas de cada decisão estarão na seção *Decisões técnicas*.
-
-## Roadmap
-
-| Etapa | Conteúdo | Status |
+| Decisão | Escolha | Por quê |
 |---|---|---|
-| 01 | Estrutura do projeto, configuração e relógio da loja | ✅ |
-| 02 | ETL: limpeza, carga em SQLite e relatório de qualidade | ✅ |
-| 03 | Regras de negócio determinísticas | ✅ |
-| 04 | Ferramentas de catálogo e pedidos | ✅ |
-| 05 | RAG sobre o manual de políticas | ✅ |
-| 06 | Provedores de LLM (Gemini API e Ollama) | ✅ |
-| 07 | Agente: persona, loop de function calling e guardrails | ✅ |
-| 08 | Persistência do histórico de conversa | ✅ |
-| 09 | Interface web, API e CLI | ✅ |
-| 10 | Documentação final, conversas de exemplo e avaliações | ⏳ |
+| Abordagem do agente | **Híbrida.** Function calling com 9 ferramentas: SQL parametrizado para dados da loja, RAG para o manual, regras de negócio em código. Loop próprio, sem framework de agentes. | Preço, estoque e pedido são consultas exatas, não similaridade de texto. O modelo decide qual ferramenta usar; o código calcula. [Detalhes](#ferramentas-do-agente) |
+| Modelo e provedor | **Gemma 4** (`gemma-4-26b-a4b-it`) via Gemini API como padrão; `gemma4:e4b` via Ollama como alternativa local. | Function calling nativo, pesos abertos, e o mesmo modelo pode rodar fora da nuvem. [Detalhes](#modelo-e-provedor) |
+| Retrieval | Manual dividido pelas próprias seções numeradas; **BM25 com sinônimos**; avaliado com 28 perguntas (hit@3 de 100%). | 25 trechos de vocabulário estreito: busca lexical é exata, explicável e mensurável. [Detalhes](#rag-sobre-o-manual-de-políticas) |
+| Estratégia de prompt | Persona curta com uma "regra de ouro" (nada sem consultar o sistema); conhecimento de domínio nas descrições e orientações das ferramentas. | Prompt enxuto e regras perto dos dados que elas governam. [Detalhes](#o-agente) |
+| Interface | **Web** em um único HTML, sem build; **API** FastAPI documentada; **CLI** para depuração. | Leve de rodar e de avaliar; a API permite plugar outro canal. [Detalhes](#interface-e-api) |
+| Persistência | **SQLite**, separado do banco da loja, com dados pessoais já mascarados, retenção e exclusão. | Continuidade, encaminhamento para a equipe e auditoria. [Detalhes](#persistência-do-histórico) |
+| Tratamento dos dados | **ETL** com contrato de colunas e 22 verificações de qualidade, cada uma com decisão explícita; relatório gerado. **LGPD**: contatos pseudonimizados e nunca enviados ao LLM. | Os dados têm inconsistências deliberadas que um agente ingênuo repetiria. [Detalhes](#dados-preparação-qualidade-e-lgpd) |
 
 ## Como rodar
 
-Requisitos: Python 3.11 ou superior.
+Requisitos: Python 3.11 ou superior e uma chave gratuita da Gemini API
+([aistudio.google.com/apikey](https://aistudio.google.com/apikey)).
 
 ```bash
-# Linux/macOS
 python -m venv .venv
-source .venv/bin/activate
-
-# Windows (PowerShell)
-py -m venv .venv
-.venv\Scripts\Activate.ps1
-
-# Instalação (modo editável, com ferramentas de desenvolvimento)
+source .venv/bin/activate          # Windows (PowerShell): .venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
 
-# Configuração (opcional nesta etapa)
-cp .env.example .env
-
-# Gera data/processed/store.db e docs/relatorio_qualidade_dados.md
-python -m emporio.etl
-
-# Chama as ferramentas do agente diretamente, sem LLM
-python -m emporio.tools
-python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1000}'
-
-# Testa o modelo (exige GEMINI_API_KEY no .env, ou Ollama configurado)
-python -m emporio.llm --ping
-python -m emporio.llm "quanto custa o Takamine GD20?"
-
-# Interface web: abra http://localhost:8000 (API documentada em /docs)
-python -m emporio.web
-
-# Conversa com o agente no terminal (--trace mostra as ferramentas chamadas)
-python -m emporio.agent --trace
-
-# Conversas salvas: listar, mostrar, exportar, apagar, aplicar a retenção
-python -m emporio.memory
-python -m emporio.memory --mostrar ID
-python -m emporio.memory --encaminhamentos
-
-# Consulta o manual de políticas e mede a qualidade da recuperação
-python -m emporio.rag "me arrependi, posso devolver?"
-python -m emporio.rag --eval
-
-# Testes
-pytest
+cp .env.example .env               # e preencha GEMINI_API_KEY no .env
+python -m emporio.etl              # gera o banco da loja a partir de data/raw
+python -m emporio.web              # abra http://localhost:8000
 ```
+
+Para usar o modelo local, defina `EMPORIO_LLM_PROVIDER=ollama` no `.env` e rode
+`ollama pull gemma4:e4b` antes. Todas as opções estão comentadas no `.env.example`.
+
+Outros comandos:
+
+```bash
+python -m emporio.agent --trace    # conversa no terminal, mostrando as ferramentas chamadas
+python -m emporio.llm --ping       # o modelo responde?
+python -m emporio.tools buscar_produtos '{"categoria": "violão", "preco_max": 1000}'
+python -m emporio.rag "me arrependi, posso devolver?"
+python -m emporio.rag --eval       # qualidade da recuperação do manual
+python -m emporio.evals            # avaliação ponta a ponta com o modelo real
+python -m emporio.evals --exemplos # gera as conversas de exemplo em docs/conversas/
+python -m emporio.memory           # conversas salvas (--mostrar, --apagar, --purgar...)
+pytest                             # testes automatizados (não usam rede)
+```
+
+## Exemplos de interação
+
+As conversas em [`docs/conversas/`](docs/conversas/) foram geradas com o modelo real por
+`python -m emporio.evals --exemplos` e exportadas do banco de conversas, sem edição:
+
+| Conversa | O que mostra |
+|---|---|
+| [Catálogo: violões até R$ 1.000](docs/conversas/01-catalogo-violoes.md) | Filtro de preço, refinamento e detalhes de um produto |
+| [Preço e pagamento: Takamine GD20](docs/conversas/02-preco-e-pagamento.md) | Promoção cadastrada mas inativa não é oferecida; PIX e parcelas calculados pelas regras |
+| [Devolução por arrependimento](docs/conversas/03-devolucao-fora-do-prazo.md) | Verificação de identidade, prazo calculado e alternativas (situação não trivial) |
+| [Pedido atrasado, fora do expediente](docs/conversas/04-pedido-atrasado-e-encaminhamento.md) | Atraso reconhecido sem inventar motivo, protocolo e retorno da equipe (situação não trivial) |
+| [Escopo e segurança](docs/conversas/05-escopo-e-seguranca.md) | Acessórios, assunto fora da loja e tentativa de manipulação |
+
+## Avaliação
+
+O projeto é avaliado em três níveis:
+
+- **Testes automatizados** (`pytest`): cobrem ETL, regras, ferramentas, RAG, provedores,
+  agente, persistência e API, sem rede, com um modelo roteirizado no lugar do LLM. Rodam a
+  cada push no GitHub Actions, em Python 3.11 e 3.12.
+- **Recuperação do manual** (`python -m emporio.rag --eval`): 28 perguntas escritas como um
+  cliente escreveria; hit@3 de 100% e MRR de 0,96.
+- **Ponta a ponta com o modelo real** (`python -m emporio.evals`): 15 cenários em
+  `evals/agente.json` com critérios objetivos (ferramenta esperada, trechos obrigatórios e
+  proibidos na resposta), cobrindo os exemplos do enunciado, regras do manual, dados
+  inconsistentes, escopo, privacidade e manipulação. O resultado da última execução está em
+  [`docs/avaliacao.md`](docs/avaliacao.md).
 
 ## Dados: preparação, qualidade e LGPD
 
@@ -169,6 +164,8 @@ que a etapa 06 converte para o formato de cada provedor de LLM.
 | `avaliar_troca_devolucao` | "Me arrependi, posso devolver?" |
 | `status_da_loja` | "Vocês estão abertos?", endereço, telefone |
 | `consultar_frete` | "Quanto é o frete para Dourados?" |
+| `buscar_politicas` | "Como funciona a garantia?", "aceitam boleto?" (RAG, etapa 05) |
+| `encaminhar_para_atendente` | Reclamação, atraso ou "quero falar com uma pessoa" (gera protocolo) |
 
 **Decisões de projeto.**
 
@@ -400,22 +397,71 @@ de não enviar CPF ou cartão e oferece "Apagar conversa", que remove a conversa
 **Na rede local.** `python -m emporio.web --host 0.0.0.0` deixa a página acessível por outros
 aparelhos da mesma rede, como um celular, pelo IP do computador na porta 8000.
 
+## Limitações conhecidas e o que eu faria com mais tempo
+
+**Avaliação.** Os conjuntos de avaliação são pequenos e foram escritos junto com o sistema;
+medem regressão, não generalização. Com mais tempo: um conjunto maior, escrito por outra
+pessoa ou extraído de conversas reais, e critérios qualitativos (tom, clareza) avaliados por
+um segundo modelo como juiz, além de comparar o modelo local com o da API no mesmo conjunto.
+
+**Uma instância só.** O cofre de dados pessoais e o limite de tentativas de verificação
+vivem na memória do processo. Com mais de um servidor, eles precisariam de um armazenamento
+compartilhado e de curta duração (ex.: Redis com expiração). Depois de um reinício, o
+cliente informa o contato de novo para consultar um pedido.
+
+**Dados estáticos.** O agente lê um retrato dos CSVs. Em produção, as ferramentas
+consultariam o sistema da loja (ERP) em tempo real, de preferência por uma réplica somente
+leitura. O prazo de arrependimento usa a previsão de entrega como data de recebimento,
+porque os dados não têm a data real.
+
+**Regras transcritas.** As regras de negócio foram escritas a partir da versão 2.1 do manual.
+Uma mudança no manual exige mudança no código; um teste que compare as constantes com o texto
+do manual reduziria o risco de divergência.
+
+**Custo e latência.** Cada mensagem faz de 2 a 3 chamadas ao modelo, e as respostas levam de 5
+a 15 segundos no tier gratuito. Com mais tempo: respostas em streaming na interface, cache de
+consultas frequentes e uso do modelo menor para mensagens simples.
+
+**Operação.** O encaminhamento registra o protocolo, mas não notifica a equipe; não há
+autenticação para funções administrativas nem painel para a equipe acompanhar os protocolos.
+Com mais tempo: notificação (e-mail ou Slack), um painel simples e integração com o WhatsApp
+pela API já existente.
+
+**Busca.** A recuperação do manual é lexical, com um dicionário de sinônimos mantido à mão.
+Com um manual maior, valeria comparar busca vetorial e híbrida (por exemplo, com
+EmbeddingGemma) no mesmo conjunto de avaliação antes de trocar.
+
 ## Estrutura
 
 ```
-data/raw/          dados originais fornecidos pela loja (não são alterados)
-data/processed/    artefatos gerados (ignorados pelo git)
-src/emporio/       código do agente
-tests/             testes automatizados
-docs/              relatórios e suposições documentadas
+data/raw/            dados originais da loja (CSVs e manual em PDF), não alterados
+src/emporio/
+  etl/               limpeza, carga em SQLite e relatório de qualidade
+  rules/             regras de negócio do manual (pagamento, trocas, horário, frete)
+  tools/             ferramentas que o agente chama
+  rag/               extração do manual, BM25 e avaliação da recuperação
+  llm/               provedores Gemini API e Ollama atrás de uma interface única
+  agent/             persona, loop de ferramentas, guardrails e dados pessoais
+  memory/            histórico de conversas e protocolos
+  web/               API FastAPI e a página de atendimento
+  evals/             avaliação ponta a ponta e geração de exemplos
+evals/               cenários e perguntas de avaliação
+docs/                relatório de qualidade, suposições, avaliação, conversas de exemplo
+tests/               testes automatizados
 ```
 
 Os arquivos em `data/raw/` foram apenas renomeados para nomes curtos
 (ex.: `desafio_tecnico_ai_eng_-_products.csv` virou `products.csv`, e o PDF perdeu o
 acento do nome para evitar problemas de codificação entre sistemas operacionais).
-O conteúdo é idêntico ao original.
+O conteúdo é idêntico ao original, e o SHA-256 de cada arquivo está no relatório de
+qualidade.
+
+As interpretações adotadas onde o enunciado, os dados ou o manual são ambíguos estão em
+[`docs/suposicoes.md`](docs/suposicoes.md).
 
 ## Uso de assistentes de código
 
-Este projeto é desenvolvido com apoio do Claude (Anthropic). O fluxo de trabalho e a
-divisão de responsabilidades serão detalhados nesta seção ao final do projeto.
+O projeto foi desenvolvido com o Claude (Anthropic), num fluxo em que eu defini as escolhas
+técnicas, aprovei cada proposta, testei com o modelo real e fiz cada commit. O fluxo de
+trabalho, a divisão de responsabilidades e onde precisei intervir estão em
+[`docs/uso-de-ia.md`](docs/uso-de-ia.md).
